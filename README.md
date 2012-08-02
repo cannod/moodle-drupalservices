@@ -10,6 +10,7 @@ TODO:
 
 * Add login URL in auth plugin instead of using alternateloginurl.
 * Clean up code.
+* Work on sync script as it is very inefficient.
 
 Overview
 
