@@ -9,6 +9,7 @@ All users are maintained on Drupal and Moodle authenticates via REST to the drup
 TODO:
 
 * Add login URL in auth plugin instead of using alternateloginurl.
+* Clean up code.
 
 Overview
 
