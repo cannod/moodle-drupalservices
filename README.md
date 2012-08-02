@@ -8,15 +8,20 @@ All users are maintained on Drupal and Moodle authenticates via REST to the drup
 
 TODO:
 
-* Better error checking. When endpoint does not exist.
-* Use REST class.
-* Include service username and password.
-* Remove any hard coded urls etc.
 * Add login URL in auth plugin instead of using alternateloginurl.
-                        
-                         
 
-Detailed instructions.
+Overview
+
+This plugin utilised the drupal services module to provide SSO between Drupal and Moodle.
+Drupal being the system that does all user management.
+
+Workflow of this plugin.
+* Checks to see if there is a valid Drupal session cookie.
+* If so, tries to connect to Drupal services and retrieve drupal user info.
+* If drupal user is valid, then updates moodle user table by either creating account or updating existing account.
+* Apon logout, the user is also logged out from drupal.
+
+Installation instructions.
 
 Drupal
 ******************************************************************
