@@ -14,7 +14,7 @@ TODO:
 
 Overview
 
-This plugin utilised the drupal services module to provide SSO between Drupal and Moodle.
+This plugin utilises the drupal services module to provide SSO between Drupal and Moodle.
 Drupal being the system that does all user management.
 
 Workflow of this plugin.
