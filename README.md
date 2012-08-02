@@ -24,8 +24,12 @@ Workflow of this plugin.
 * Apon logout, the user is also logged out from drupal.
 
 NOTES
-First name, Last name, city and country are obtained from an address field in the Drupal users profile.
+* First name, Last name, city and country are obtained from an address field in the Drupal users profile.
 So you will need to modify the code to suit your environment.
+This plugin does not sync users by username but instead by uid (drupal side) and ID number (Moodle side).
+This allows the username to change on drupal and prevents moodle from creating a new user if the username changes.
+This does mean that the ID number field must be locked or you could have big problems and possible security issues.
+
 
 Installation instructions.
 
