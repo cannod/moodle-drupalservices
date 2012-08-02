@@ -11,6 +11,7 @@ TODO:
 * Add login URL in auth plugin instead of using alternateloginurl.
 * Clean up code.
 * Work on sync script as it is very inefficient.
+* Use http://drupal.org/project/services_views to create custom user view with all user fields. No more hard coded fields.
 
 Overview
 
