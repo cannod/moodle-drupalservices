@@ -22,6 +22,10 @@ Workflow of this plugin.
 * If drupal user is valid, then updates moodle user table by either creating account or updating existing account.
 * Apon logout, the user is also logged out from drupal.
 
+NOTES
+First name, Last name, city and country are obtained from an address field in the Drupal users profile.
+So you will need to modify the code to suit your environment.
+
 Installation instructions.
 
 Drupal
@@ -61,6 +65,8 @@ Moodle
 * Enter that users password.
 * IMPORTANT!!!! Lock the ID Number field! This field is being used to store the drupal uid for each user.
 * I tried locking this field programmatically but had no luck.
+* If using fields from drupal, you should lock those fields as well as updating is only one way. Drupal -> Moodle.
+* This prevents users from updating those fields in Moodle.
 * Save changes.
 * Enable the Drupal services plugin.
 
