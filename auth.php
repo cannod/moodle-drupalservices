@@ -63,7 +63,6 @@ class auth_plugin_drupalservices extends auth_plugin_base {
             }
             // FIX so not hard coded.
             redirect($base_url . '/user/login?destination=' . $path . $args);
-            //redirect('https://www.yogamandir.com.au/user/login?destination=' . $urltogo);
          }
          return; // just send user to login page 
       }
