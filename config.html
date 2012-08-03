@@ -16,6 +16,13 @@
     if (!isset($config->removeuser)) {
         $config->removeuser = AUTH_REMOVEUSER_KEEP;
     }
+    if (empty($config->cohorts)) {
+        $config->cohorts = 0;
+    }
+    if (!isset($config->cohort_view)) {
+        $config->cohort_view = '';
+    }
+
     //does not work.
     $config->field_lock_idnumber = 'locked';
 
@@ -93,7 +100,26 @@
         <?php print_string('auth_drupalservices_remote_pw', 'auth_drupalservices') ?>
     </td>
 </tr>
-<tr>
+<tr valign="top">
+    <td align="right"><label for="menuupdatecohorts"><?php print_string("auth_drupalservices_cohorts_key", "auth_drupalservices") ?></label></td>
+    <td>
+        <?php echo html_writer::select($yesno, 'cohorts', $config->cohorts, false); ?>
+    </td>
+    <td><?php print_string("auth_drupalservices_cohorts", "auth_drupalservices") ?></td>
+</tr>
+<tr valign="top">
+    <td align="right">
+        <label for="cohort_view"><?php print_string('auth_drupalservices_cohort_view_key', 'auth_drupalservices') ?></label>
+    </td>
+    <td>
+        <input name="cohort_view" id="cohort_view" type="text" size="30" value="<?php echo $config->cohort_view?>" />
+        <?php if (isset($err['cohort_view'])) { echo $OUTPUT->error_text($err['cohort_view']); } ?>
+    </td>
+    <td>
+        <?php print_string('auth_drupalservices_cohort_view', 'auth_drupalservices') ?>
+    </td>
+</tr>
+
 <?php
 
 print_auth_lock_options($this->authtype, $user_fields, get_string('auth_fieldlocks_help', 'auth'), false, false);

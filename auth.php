@@ -397,6 +397,14 @@ class auth_plugin_drupalservices extends auth_plugin_base {
       if (!isset($config->removeuser)) {
             $config->removeuser = AUTH_REMOVEUSER_KEEP;
       }
+      if (!isset($config->cohorts)) {
+          $config->cohorts = 0;
+      }
+      if (!isset($config->cohort_view)) {
+          $config->cohort_view = '';
+      }
+
+
       // Lock the idnumber as this is the drupal uid number
       // NOT WORKING!
       $config->field_lock_idnumber = 'locked';
@@ -406,6 +414,8 @@ class auth_plugin_drupalservices extends auth_plugin_base {
       set_config('endpoint',        $config->endpoint,        'auth/drupalservices');
       set_config('remote_user',     $config->remote_user,     'auth/drupalservices');
       set_config('remote_pw',       $config->remote_pw,       'auth/drupalservices');
+      set_config('cohorts',         $config->cohorts,         'auth/drupalservices');
+      set_config('cohort_view',     $config->cohort_view,     'auth/drupalservices');
       set_config('removeuser',      $config->removeuser,      'auth/drupalservices');
       set_config('field_lock_idnumber',      $config->field_lock_idnumber,      'auth/drupalservices');
       return true;
