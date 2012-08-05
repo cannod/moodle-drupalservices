@@ -19,6 +19,7 @@ if (!defined('MOODLE_INTERNAL')) {
 }
 
 require_once($CFG->libdir.'/authlib.php');
+require_once($CFG->dirroot.'/cohort/lib.php');
 require_once($CFG->dirroot.'/auth/drupalservices/REST-API.php');
 
 // Drupal SSO authentication plugin.
@@ -189,7 +190,7 @@ class auth_plugin_drupalservices extends auth_plugin_base {
             $user = $DB->get_record('user',
                array('username'=>$username, 'mnethostid'=>$CFG->mnet_localhost_id));
             if (!$user) {
-               print_error('auth_drupalservicescantinsert','auth_db',$username);
+               print_error('auth_drupalservicescantinsert','auth_db',$username); 
             }
       } else {
             // Update user information
@@ -202,7 +203,7 @@ class auth_plugin_drupalservices extends auth_plugin_base {
             $user->country    = $country;
             $user->auth       = $this->authtype;
             if (!$DB->update_record('user', $user)) {
-                        print_error('auth_drupalservicescantupdate','auth_db',$username);
+               print_error('auth_drupalservicescantupdate','auth_db',$username);
             }
       }
       return $user;
@@ -259,6 +260,7 @@ class auth_plugin_drupalservices extends auth_plugin_base {
 
       // list external users
       $ret = $apiObj->Index('user', '?pagesize=5000&fields=uid&parameters[status]=1');
+      //$ret = $apiObj->Index('user', '?pagesize=5&fields=uid&parameters[status]=1&parameters[uid]=10');
 
       if (is_null($ret)) {
         die("ERROR: Problems trying to get index of users!\n");
@@ -318,7 +320,6 @@ class auth_plugin_drupalservices extends auth_plugin_base {
        }
 
       // sync users in Drupal with users in Moodle (adding users if needed)
-
       if ($do_updates) {
             // sync users in Drupal with users in Moodle (adding users if needed)
             // Not very efficient but hey?
@@ -330,7 +331,7 @@ class auth_plugin_drupalservices extends auth_plugin_base {
 
                if ($uid < 1) { //No anon 
                  print "Skipping anon user - uid $uid\n";
-                 next;
+                 continue;
                }
 
                //Get user details
@@ -338,20 +339,101 @@ class auth_plugin_drupalservices extends auth_plugin_base {
 
                if (is_null($drupal_user)) {
                  print "ERROR: Error retreiving user $uid\n";
-                 next;
+                 continue; //Next user
                }
 
-               print_string('auth_drupalservicesupdateuser', 'auth_drupalservices', $drupal_user->name . "\n");
+               print_string('auth_drupalservicesupdateuser', 'auth_drupalservices', $drupal_user->name . '(' . $drupal_user->uid . ')' . "\n");
                $user = $this->create_update_user($drupal_user);
                if (empty($user)) {
                    // Something went wrong while creating the user
                    print_error('auth_drupalservicescreateaccount', 'auth_drupalservices',
                    $drupal_user->name);
+                   continue; //Next user
                } 
-            }
-            unset($userlist); // free mem! 
-       }
-       // END OF DO UPDATES
+           }
+           //unset($userlist); // free mem! 
+       } // END OF DO UPDATES
+
+       // Now do cohorts
+      if ($this->config->cohorts != 0) {
+         $cohort_view = $this->config->cohort_view;
+
+         print "Updating cohorts uisng services view - $cohort_view\n";
+
+         $context = get_context_instance(CONTEXT_SYSTEM);
+         //$processed_cohorts_list = array(); 
+
+         $drupal_cohorts = $apiObj->Index($cohort_view);
+         if (is_null($drupal_cohorts)) {
+             print "ERROR: Error retreiving cohorts!\n";
+         } else {
+             // OK First lets create any Moodle cohorts that are in drupal.
+             foreach ($drupal_cohorts as $drupal_cohort) {
+               if ($drupal_cohort->cohort_name == '') {
+                     continue; // We don't want an empty cohort name
+               }
+
+               $drupal_cohort_list[] = $drupal_cohort->cohort_name;
+
+               if (!$this->cohort_exists($drupal_cohort->cohort_name)) {
+                 $newcohort = new stdClass();
+                 $newcohort->name = $drupal_cohort->cohort_name;
+                 $newcohort->idnumber = $drupal_cohort->cohort_id;
+                 $newcohort->description = $drupal_cohort->cohort_description;
+                 $newcohort->contextid = $context->id;
+                 $newcohort->component = 'auth_drupalservices';
+                 $cid = cohort_add_cohort($newcohort);
+                 print "Cohort $drupal_cohort->cohort_name ($cid) created!\n";
+               }
+             }
+             // Next lets delete any Moodle cohorts that are not in drupal.
+             // Now create a unique array
+             $drupal_cohort_list = array_unique($drupal_cohort_list);
+             //print_r($drupal_cohort_list);
+             $moodle_cohorts = $this->moodle_cohorts();
+             //print_r($moodle_cohorts);
+             foreach ($moodle_cohorts as $moodle_cohort) {
+               if (array_search($moodle_cohort->name, $drupal_cohort_list) === false) {
+                 print "$moodle_cohort->name not in drupal - deleteing\n";
+                 cohort_delete_cohort($moodle_cohort);
+               }
+               $moodle_cohorts_list[$moodle_cohort->id] = $moodle_cohort->name;
+             }
+             // Cool. Now lets go through each user and add them to cohorts.
+             // arrays to use? $userlist - list of uids. $drupal_cohorts - view. $drupal_cohorts_list. Moodle lists.
+             foreach ( $userlist as $uid ) {
+               $drupal_user_cohort_list = array();
+               //print "$uid\n";
+               $user = $DB->get_record('user',
+                   array('idnumber'=>$uid, 'mnethostid'=>$CFG->mnet_localhost_id));
+               
+               // Get array of cohort names this user belongs to.
+               $drupal_user_cohorts = $this->drupal_user_cohorts($uid, $drupal_cohorts);
+               foreach ( $drupal_user_cohorts as $drupal_user_cohort ) {
+                 //get the cohort id frm the moodle list.
+                 $cid = array_search($drupal_user_cohort->cohort_name, $moodle_cohorts_list);
+                 //print "$cid\n";
+
+                 if (!$DB->record_exists('cohort_members', array('cohortid'=>$cid, 'userid'=>$user->id))) {
+                   cohort_add_member($cid, $user->id);
+                   print "Added $user->username ($user->id) to cohort $drupal_user_cohort->cohort_name\n"; 
+                 }
+                 // Create a list of enrolled cohorts to use later.
+                 $drupal_user_cohort_list[] = $cid;
+               }
+               // Cool. now get this users list of moodle cohorts and compare with drupal. remove from moodle if needed.
+               $moodle_user_cohorts = $this->moodle_user_cohorts($user);
+               //print_r($moodle_user_cohorts);
+               foreach ($moodle_user_cohorts as $moodle_user_cohort) {
+                 if(array_search($moodle_user_cohort->cid, $drupal_user_cohort_list) === false) {
+                   cohort_remove_member($moodle_user_cohort->cid, $user->id);
+                   print "Removed $user->username ($user->id) from cohort $moodle_user_cohort->name\n"; 
+                 }
+               }
+             }
+          }
+       } // End of cohorts
+
 
        //LOGOUT
        $ret = $apiObj->Logout();
@@ -420,6 +502,60 @@ class auth_plugin_drupalservices extends auth_plugin_base {
       set_config('field_lock_idnumber',      $config->field_lock_idnumber,      'auth/drupalservices');
       return true;
    }
+
+// Check if cohort exists. return true if so.
+  function cohort_exists($drupal_cohort_name) {
+    global $DB;
+
+    $context = get_context_instance(CONTEXT_SYSTEM);
+    $clause = array('contextid'=>$context->id);
+    $clause['component'] = 'auth_drupalservices';
+
+    $moodle_cohorts = $DB->get_records('cohort', $clause);
+    foreach ($moodle_cohorts as $moodle_cohort) {
+      if ($drupal_cohort_name == $moodle_cohort->name) {
+        return true;
+      }
+    }
+    // no match so return false
+    return false;
+  }
+
+//return list of cohorts
+  function moodle_cohorts() {
+    global $DB;
+
+    $context = get_context_instance(CONTEXT_SYSTEM);
+    $clause = array('contextid'=>$context->id);
+    $clause['component'] = 'auth_drupalservices';
+
+    $moodle_cohorts = $DB->get_records('cohort', $clause);
+    //foreach ($moodle_cohorts as $moodle_cohort) {
+    //  $moodle_cohorts_list[$moodle_cohort->id] = $moodle_cohort->name;
+   // }
+    return $moodle_cohorts;
+  }
+
+  function drupal_user_cohorts($uid, $drupal_cohorts) {
+    $user_cohorts = array();
+    foreach ($drupal_cohorts as $drupal_cohort ) {
+      if ( $uid == $drupal_cohort->uid ) {
+        //$user_cohorts[] = $drupal_cohort->cohort_name;
+        $user_cohorts[] = $drupal_cohort;
+      }
+    }
+    return $user_cohorts;
+  }
+
+  function moodle_user_cohorts($user) {
+    global $DB;
+
+    $sql = "SELECT c.id AS cid, c.name AS name FROM {cohort} c JOIN {cohort_members} cm ON cm.cohortid = c.id WHERE c.component = 'auth_drupalservices' AND cm.userid = $user->id";
+    $user_cohorts = $DB->get_records_sql($sql);    
+    return $user_cohorts; 
+  }
+
+
 
   /**
   * Check to see if a user has been assigned a certain role.

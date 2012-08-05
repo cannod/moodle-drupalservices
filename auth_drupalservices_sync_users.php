@@ -29,4 +29,4 @@ if (!is_enabled_auth('drupalservices')) {
 }
 
 $drupalservicesauth = get_auth_plugin('drupalservices');
-$drupalservicesauth->sync_users(false);
+$drupalservicesauth->sync_users(true);
