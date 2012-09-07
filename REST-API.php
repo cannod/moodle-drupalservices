@@ -38,6 +38,7 @@ class RemoteAPI {
                   CURLOPT_HTTPHEADER => array('Accept: application/json'),
                   CURLOPT_POST => true,
                   CURLOPT_POSTFIELDS => $data,
+                  CURLOPT_SSL_VERIFYPEER => false,
                 );
     if ($includeAuthCookie) {
       $ret[CURLOPT_COOKIE] = $this->GetCookieHeader();
@@ -54,6 +55,7 @@ class RemoteAPI {
                   CURLOPT_BINARYTRANSFER => 1,
                   CURLOPT_TIMEOUT => 3,
                   CURLOPT_HTTPHEADER => array('Accept: application/json'),
+                  CURLOPT_SSL_VERIFYPEER => false,
                 );
     if ($includeAuthCookie) {
       $ret[CURLOPT_COOKIE] = $this->GetCookieHeader();
@@ -72,6 +74,7 @@ class RemoteAPI {
                   CURLOPT_HTTPHEADER => array('Content-Length: ' . strlen($data),
                                               'Accept: application/json'),
                   CURLOPT_POSTFIELDS => $data,
+                  CURLOPT_SSL_VERIFYPEER => false,
                 );
     if ($includeAuthCookie) {
       $ret[CURLOPT_COOKIE] = $this->GetCookieHeader();
@@ -88,6 +91,7 @@ class RemoteAPI {
                   CURLOPT_TIMEOUT => 3,
                   CURLOPT_HTTPHEADER => array('Accept: application/json'),
                   CURLOPT_CUSTOMREQUEST => 'DELETE',
+                  CURLOPT_SSL_VERIFYPEER => false,
                 );
     if ($includeAuthCookie) {
       $ret[CURLOPT_COOKIE] = $this->GetCookieHeader();
