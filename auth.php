@@ -335,7 +335,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
                 }
                 //Get user details
                 $drupal_user = $apiObj->Get('user', $uid); // <- Get user
-                if (is_null($drupal_user)) {
+                if (is_null($drupal_user) || empty($drupal_user)) {
                     print "ERROR: Error retreiving user $uid\n";
                     continue; //Next user
                     
