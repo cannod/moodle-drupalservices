@@ -143,7 +143,10 @@ class RemoteAPI {
       default:
         return NULL;
     }
-   
+
+    // I had to do this as my hosting provider had dns cache issues. 
+    $ip = gethostbyname(parse_url($url,  PHP_URL_HOST));
+
     $ret = new stdClass;
     $ret->response = curl_exec($ch); // execute and get response
     $ret->error    = curl_error($ch);
