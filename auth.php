@@ -253,18 +253,14 @@ class auth_plugin_drupalservices extends auth_plugin_base
         }
         print_r($apiObj);
         // list external users
-        //$ret = $apiObj->Index('user', '?pagesize=5000&fields=uid&parameters[status]=1');
-        //$ret = $apiObj->Index('user', '?pagesize=5&fields=uid&parameters[status]=1&parameters[uid]=10');
         $drupal_users = $apiObj->Index('muser');
         if (is_null($drupal_users)) {
             die("ERROR: Problems trying to get index of users!\n");
         }
-//print_r($drupal_users);
         $userlist = array();
         foreach ($drupal_users as $drupal_user) {
             array_push($userlist, $drupal_user->uid);
         }
-//print_r($userlist);
         if (!empty($this->config->removeuser)) {
             // find obsolete users
             if (count($userlist)) {
