@@ -6,6 +6,10 @@ Moodle plugin to connect to Drupal services
 This is a moodle authorisation pluging that allows for SSO between Drupal and Moodle.
 All users are maintained on Drupal and Moodle authenticates via REST to the drupal Services module.
 
+NOTE!!!!!
+Under heavy development!!!! This plugin now uses views for getting data.
+More documentation needs to be written!
+
 TODO:
 
 * Add login URL in auth plugin instead of using alternateloginurl.
