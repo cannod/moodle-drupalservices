@@ -100,6 +100,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
         $SESSION->drupal_session_name = $session_name;
         $SESSION->drupal_session_id = $session_id;
         $apiObj = new RemoteAPI($base_url, $endpoint, 1, $session_name, $session_id);
+        // Connect to Drupal with this session
         $ret = $apiObj->Connect();
         if (is_null($ret)) {
             //should we just return?
@@ -114,32 +115,19 @@ class auth_plugin_drupalservices extends auth_plugin_base
         if ($uid < 1) { //No anon
             return;
         }
-        $drupal_user = $apiObj->Get('user', $uid); // <- Get user
-        if (is_null($drupal_user) || empty($drupal_user)) {
-            //should we just return?
-            if (isloggedin() && !isguestuser()) {
-                // the user is logged-off of Drupal but still logged-in on Moodle
-                // so we must now log-off the user from Moodle...
-                require_logout();
-            }
-            return;
-        }
         // The Drupal session is valid; now check if Moodle is logged in...
         if (isloggedin() && !isguestuser()) {
             return;
         }
-        // Moodle is not logged in so fetch or create the corresponding user
-        $user = $this->create_update_user($drupal_user);
+        // See if we have a moodle user with this idnumber 
+        $user = get_complete_user_data('idnumber', $uid);
+
         if (empty($user)) {
-            // Something went wrong while creating the user
-            print_error('auth_drupalservicescreateaccount', 'auth_drupalservices', $drupal_user->username);
-            unset($drupal_user);
-            return;
+          // User not in Moodle database yet.
+          return;
         }
-        unset($drupal_user);
-        // complete login
-        $USER = get_complete_user_data('id', $user->id);
-        complete_user_login($USER);
+        // Complete the login
+        complete_user_login($user);
         // redirect
         if (isset($SESSION->wantsurl) and (strpos($SESSION->wantsurl, $CFG->wwwroot) == 0)) {
             // the URL is set and within Moodle's environment
@@ -166,14 +154,14 @@ class auth_plugin_drupalservices extends auth_plugin_base
         global $CFG, $DB;
         $uid = $drupal_user->uid;
         $username = $drupal_user->name;
-        $email = $drupal_user->mail;
+        $email = $drupal_user->email;
         //status should be 1.
         $status = $drupal_user->status;
-        $timezone = $drupal_user->timezone;
-        $firstname = $drupal_user->field_address->und[0]->first_name;
-        $lastname = $drupal_user->field_address->und[0]->last_name;
-        $city = $drupal_user->field_address->und[0]->locality;
-        $country = $drupal_user->field_address->und[0]->country;
+        //$timezone = $drupal_user->timezone;
+        $firstname = $drupal_user->firstname;
+        $lastname = $drupal_user->lastname;
+        $city = $drupal_user->city;
+        $country = $drupal_user->country;
         // MIGHT DO THIS? $user = create_user_record($username, "", "joomdle");
         // and do better checks for updated fields. 
         // Maybe $DB->update_record('user', $updateuser);
@@ -265,15 +253,18 @@ class auth_plugin_drupalservices extends auth_plugin_base
         }
         print_r($apiObj);
         // list external users
-        $ret = $apiObj->Index('user', '?pagesize=5000&fields=uid&parameters[status]=1');
+        //$ret = $apiObj->Index('user', '?pagesize=5000&fields=uid&parameters[status]=1');
         //$ret = $apiObj->Index('user', '?pagesize=5&fields=uid&parameters[status]=1&parameters[uid]=10');
-        if (is_null($ret)) {
+        $drupal_users = $apiObj->Index('muser');
+        if (is_null($drupal_users)) {
             die("ERROR: Problems trying to get index of users!\n");
         }
+//print_r($drupal_users);
         $userlist = array();
-        foreach ($ret as $user) {
-            array_push($userlist, $user->uid);
+        foreach ($drupal_users as $drupal_user) {
+            array_push($userlist, $drupal_user->uid);
         }
+//print_r($userlist);
         if (!empty($this->config->removeuser)) {
             // find obsolete users
             if (count($userlist)) {
@@ -328,17 +319,10 @@ class auth_plugin_drupalservices extends auth_plugin_base
             // Not very efficient but hey?
             print_string('auth_drupalservicesuserstoupdate', 'auth_drupalservices', count($userlist));
             print "\n";
-            foreach ($userlist as $uid) {
-                if ($uid < 1) { //No anon
+            foreach ($drupal_users as $drupal_user) {
+                if ($drupal_user->uid < 1) { //No anon
                     print "Skipping anon user - uid $uid\n";
                     continue;
-                }
-                //Get user details
-                $drupal_user = $apiObj->Get('user', $uid); // <- Get user
-                if (is_null($drupal_user) || empty($drupal_user)) {
-                    print "ERROR: Error retreiving user $uid\n";
-                    continue; //Next user
-                    
                 }
                 print_string('auth_drupalservicesupdateuser', 'auth_drupalservices', $drupal_user->name . '(' . $drupal_user->uid . ')' . "\n");
                 $user = $this->create_update_user($drupal_user);
@@ -346,14 +330,13 @@ class auth_plugin_drupalservices extends auth_plugin_base
                     // Something went wrong while creating the user
                     print_error('auth_drupalservicescreateaccount', 'auth_drupalservices', $drupal_user->name);
                     continue; //Next user
-                    
                 }
             }
         } // END OF DO UPDATES
         // Now do cohorts
-        if ($this->config->cohorts != 0) {
+        if (($do_updates) && ($this->config->cohorts != 0)) {
             $cohort_view = $this->config->cohort_view;
-            print "Updating cohorts uisng services view - $cohort_view\n";
+            print "Updating cohorts using services view - $cohort_view\n";
             $context = get_context_instance(CONTEXT_SYSTEM);
             //$processed_cohorts_list = array();
             $drupal_cohorts = $apiObj->Index($cohort_view);
