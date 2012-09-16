@@ -254,7 +254,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
         print_r($apiObj);
         // list external users
         $drupal_users = $apiObj->Index('muser');
-        if (is_null($drupal_users)) {
+        if (is_null($drupal_users) || empty($drupal_users)) {
             die("ERROR: Problems trying to get index of users!\n");
         }
         $userlist = array();
