@@ -1,4 +1,4 @@
-moodle-drupalservices
+moodle-drupalservices AKA droodle
 =====================
 
 Moodle plugin to connect to Drupal services
