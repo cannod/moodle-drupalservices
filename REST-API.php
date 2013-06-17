@@ -19,6 +19,7 @@ class RemoteAPI {
     $this->status  = $status;
     $this->session = $session;
     $this->sessid  = $sessid;
+    $this->CSRFToken = '';
   }
 
   // *****************************************************************************
@@ -27,10 +28,32 @@ class RemoteAPI {
   private function GetCookieHeader() {
     return $this->session.'='.$this->sessid;
   }
- 
+
+  // *****************************************************************************
+  // after login, the string generated here needs to be included in any http headers,
+  // under the key 'X-CSRF-Token':
+  private function GetCSRFTokenHeader() {
+    return 'X-CSRF-Token: '.$this->CSRFToken;
+  }
+
+  private function GetCSRFToken() {
+
+    $url = $this->gateway . '/services/session/token';
+
+    $ch = curl_init();    // create curl resource
+    curl_setopt_array($ch, $this->GetCurlGetOptions($url, true));
+
+    // I had to do this as my hosting provider had dns cache issues. 
+    $ip = gethostbyname(parse_url($url,  PHP_URL_HOST));
+
+    $response = curl_exec($ch); // execute and get response
+    curl_close($ch);
+
+    return $response;
+  } 
   // *****************************************************************************
   // return the standard set of curl options for a POST
-  private function GetCurlPostOptions( $url, $data, $includeAuthCookie = false ) {
+  private function GetCurlPostOptions( $url, $data, $includeAuthCookie = false, $includeCSRFToken = false ) {
     $ret = array( CURLOPT_URL => $url,
                   CURLOPT_FAILONERROR => true,
                   CURLOPT_RETURNTRANSFER => true,
@@ -39,10 +62,15 @@ class RemoteAPI {
                   CURLOPT_POST => true,
                   CURLOPT_POSTFIELDS => $data,
                   CURLOPT_SSL_VERIFYPEER => false,
+                  // CURLOPT_VERBOSE => true,
                 );
     if ($includeAuthCookie) {
       $ret[CURLOPT_COOKIE] = $this->GetCookieHeader();
     }
+    if ($includeCSRFToken) {
+      $ret[CURLOPT_HTTPHEADER][] = $this->GetCSRFTokenHeader();
+    }
+
     return $ret;
   }
    
@@ -132,11 +160,11 @@ class RemoteAPI {
   // *****************************************************************************
   // Perform the common logic for performing an HTTP request with cURL
   // return an object with 'response', 'error' and 'info' fields.
-  private function CurlHttpRequest( $caller, $url, $method, $data, $includeAuthCookie = false ) {
+  private function CurlHttpRequest( $caller, $url, $method, $data, $includeAuthCookie = false, $includeCSRFToken = false ) {
    
     $ch = curl_init();    // create curl resource
     switch ($method) {
-      case 'POST':   curl_setopt_array($ch, $this->GetCurlPostOptions($url,$data, $includeAuthCookie)); break;
+      case 'POST':   curl_setopt_array($ch, $this->GetCurlPostOptions($url,$data, $includeAuthCookie, $includeCSRFToken)); break;
       case 'GET':    curl_setopt_array($ch, $this->GetCurlGetOptions($url, $includeAuthCookie));        break;
       case 'PUT':    curl_setopt_array($ch, $this->GetCurlPutOptions($url, $data, $includeAuthCookie)); break;
       case 'DELETE': curl_setopt_array($ch, $this->GetCurlDeleteOptions($url, $includeAuthCookie));     break;
@@ -169,9 +197,12 @@ class RemoteAPI {
       return NULL; // error
     }
 
+    // First lets get CSRF Token from services.
+    $this->CSRFToken = $this->GetCSRFToken();
+
     $url = $this->gateway.$this->endpoint.'/system/connect';
 
-    $ret = $this->CurlHttpRequest($callerId, $url, 'POST', "", true);
+    $ret = $this->CurlHttpRequest($callerId, $url, 'POST', "", true, true);
     if ($ret->info['http_code'] != 200) {
       return NULL;
     }
@@ -201,6 +232,7 @@ class RemoteAPI {
       $this->sessid  = $ret->response->sessid;
       $this->session = $ret->response->session_name;
       $this->status = RemoteAPI::RemoteAPI_status_loggedin;
+      $this->CSRFToken = $this->GetCSRFToken();
       return true; // success!
     }
  
@@ -217,7 +249,7 @@ class RemoteAPI {
       
     $url = $this->gateway.$this->endpoint.'/user/logout';
 
-    $ret = $this->CurlHttpRequest($callerId, $url, 'POST', NULL, true);
+    $ret = $this->CurlHttpRequest($callerId, $url, 'POST', NULL, true, true);
     if ($ret->info['http_code'] != 200) {
       return NULL;
     }
@@ -225,6 +257,7 @@ class RemoteAPI {
       $this->status = RemoteAPI::RemoteAPI_status_unconnected;
       $this->sessid  = '';
       $this->session = '';
+      $this->CSRFToken = '';
       return true; // success!
     }
  
