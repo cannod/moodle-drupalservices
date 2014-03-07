@@ -12,12 +12,12 @@ $string['auth_drupalservices_remote_user_key'] = 'Remote user.';
 $string['auth_drupalservices_remote_user'] = 'This is the drupal user used to get index of all users when syncing. Must be able to get unlimited indexes, so set this permission for this user. See docs.';
 $string['auth_drupalservices_remote_pw_key'] = 'Remote user password.';
 $string['auth_drupalservices_remote_pw'] = 'This is the remote user password.';
-$string['auth_drupalservicesremove_user_key'] = 'Removed&nbsp;Drupal&nbsp;User';
+$string['auth_drupalservicesremove_user_key'] = 'Removed Drupal User';
 $string['auth_drupalservicesremove_user'] = 'Specify what to do with internal user accounts during mass synchronization when users were removed from Drupal. Only suspended users are automatically revived if they reappear in Drupal.';
-$string['auth_drupalservices_cohorts_key'] = 'Create cohorts (experimental)';
-$string['auth_drupalservices_cohorts'] = 'Create cohorts by looking at a custom view on drupal. Please do not use at this stage!';
-$string['auth_drupalservices_cohort_view_key'] = 'Path to cohort view (experimental)';
-$string['auth_drupalservices_cohort_view'] = 'The path to the cohort view. Please do not use at this stage!';
+$string['auth_drupalservices_cohorts_key'] = 'Create cohorts';
+$string['auth_drupalservices_cohorts'] = 'Create cohorts by looking at a custom view on drupal.';
+$string['auth_drupalservices_cohort_view_key'] = 'Path to cohort view';
+$string['auth_drupalservices_cohort_view'] = 'The path to the cohort view.';
 
 $string['auth_drupalservicesnorecords'] = 'The Drupal database has no user records!';
 $string['auth_drupalservicescreateaccount'] = 'Unable to create Moodle account for user {$a}';
