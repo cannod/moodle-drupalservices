@@ -4,6 +4,8 @@ $string['auth_drupalservicesdescription'] = 'This authentication plugin enables 
 
 $string['auth_drupalserviceshostname_key'] = 'Drupal Hostname';
 $string['auth_drupalserviceshostname'] = 'Hostname of Drupal services. Include protocol (http:// or https://) and no trailing slash.';
+$string['auth_drupalservicescookiedomain_key'] = 'Drupal Session Cookie Domain';
+$string['auth_drupalservicescookiedomain'] = 'This is the domain of the drupal session cookie. In most cases this will be the same as "hostname" but in some cases such as when used under a multiple subdomain sso situation, this value will be different. If unsure what to use, leave this field blank.';
 $string['auth_drupalservicesendpoint_key'] = 'Endpoint';
 $string['auth_drupalservicesendpoint'] = 'Name of the Drupal Service endpoint. Include leading slash but no trailing slash. eg. /service';
 $string['auth_drupalservices_remote_user_key'] = 'Remote user.';

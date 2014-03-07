@@ -470,6 +470,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
         $config->field_lock_idnumber = 'locked';
         // save settings
         set_config('hostname', $config->hostname, 'auth/drupalservices');
+        set_config('cookiedomain', $config->cookiedomain, 'auth/drupalservices');
         set_config('endpoint', $config->endpoint, 'auth/drupalservices');
         set_config('remote_user', $config->remote_user, 'auth/drupalservices');
         set_config('remote_pw', $config->remote_pw, 'auth/drupalservices');
@@ -560,6 +561,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
      */ 
     function get_drupal_session($base_url)
     {
+        $cfg=get_config('auth/drupalservices');
         // Otherwise use $base_url as session name, without the protocol
         // to use the same session identifiers across http and https.
         list($protocol, $session_name) = explode('://', $base_url, 2);
@@ -568,7 +570,9 @@ class auth_plugin_drupalservices extends auth_plugin_base
         } else {
             $prefix = 'SESS';
         }
-        $session_name = $prefix . substr(hash('sha256', $session_name), 0, 32);
+        $session_name=$cfg->cookiedomain;
+
+        $session_name = $prefix . substr(hash('sha256', '.'.$session_name), 0, 32);
         if (isset($_COOKIE[$session_name])) {
             $session_id = $_COOKIE[$session_name];
             $return = array('session_name' => $session_name, 'session_id' => $session_id,);

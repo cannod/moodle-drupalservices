@@ -45,6 +45,20 @@
     </td>
     <td><?php print_string("auth_drupalserviceshostname", "auth_drupalservices") ?></td>
 </tr>
+<tr valign="top" class="required">
+    <td align="right"><label for="cookiedomain"><?php print_string("auth_drupalservicescookiedomain_key", "auth_drupalservices") ?></label></td>
+    <td>
+        <input id="cookiedomain" name="cookiedomain" type="text" size="30" value="<?php echo $config->cookiedomain?>" />
+        <?php
+
+    if (isset($err["cookiedomain"])) {
+        echo $OUTPUT->error_text($err["cookiedomain"]);
+        }
+
+        ?>
+    </td>
+    <td><?php print_string("auth_drupalservicescookiedomain", "auth_drupalservices") ?></td>
+</tr>
 
 <tr valign="top" class="required">
     <td align="right"><label for="endpoint"><?php print_string("auth_drupalservicesendpoint_key", "auth_drupalservices") ?></label></td>
