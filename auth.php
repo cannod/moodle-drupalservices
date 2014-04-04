@@ -123,8 +123,9 @@ class auth_plugin_drupalservices extends auth_plugin_base
         $user = get_complete_user_data('idnumber', $uid);
 
         if (empty($user)) {
-          // User not in Moodle database yet.
-          return;
+          $newuser = $apiObj->Index('muser?uid='.$uid);
+          $this->create_update_user($newuser[0]);
+          $user = get_complete_user_data('idnumber', $uid);
         }
         // Complete the login
         complete_user_login($user);
