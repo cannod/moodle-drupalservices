@@ -20,8 +20,7 @@
 
 define('CLI_SCRIPT', true);
 
-//require_once(dirname(dirname(dirname(__FILE__))).'/config.php');
-require_once('/var/www/symphony/moodle/config.php');
+require_once(dirname(dirname(dirname(__FILE__))).'/config.php');
 require_once($CFG->dirroot.'/course/lib.php');
 
 if (!is_enabled_auth('drupalservices')) {
