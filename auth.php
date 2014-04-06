@@ -248,11 +248,13 @@ class auth_plugin_drupalservices extends auth_plugin_base
         $endpoint = $this->config->endpoint;
         $apiObj = new RemoteAPI($base_url, $endpoint);
         // Required for authentication, and all other operations:
-        $ret = $apiObj->Login($remote_user, $remote_pw);
-        if (is_null($ret)) {
-            die("ERROR: Login error!\n");
+        $ret = $apiObj->Login($remote_user, $remote_pw, true);
+        if ($ret->info['http_code']==404) {
+          die("ERROR: Login service unreachable!\n");
         }
-        print_r($apiObj);
+        if ($ret->info['http_code']==401) {
+          die("ERROR: Login failed - check username and password!\n");
+        }
         // list external users
         $drupal_users = $apiObj->Index('muser');
         if (is_null($drupal_users) || empty($drupal_users)) {
@@ -423,6 +425,76 @@ class auth_plugin_drupalservices extends auth_plugin_base
      */
     function config_form($config, $err, $user_fields)
     {
+        if($config->hostname){
+          $base_url = $config->hostname;
+          $drupalsession = $this->get_drupal_session($base_url);
+          $remote_user = $config->remote_user;
+          $remote_pw = $config->remote_pw;
+
+          //test #1: cookie found?
+          if($drupalsession){
+            $tests['cookie']=array('success'=>(bool)$drupalsession, 'message'=>"SSO Cookie discovered properly");
+          }
+          else{
+            $tests['cookie']=array('success'=>(bool)$drupalsession, 'message'=>"SSO Cookie not discovered. 1) check that you are currently logged in to drupal. 2) Check that Drupal's session cookie is configured in settings.php 3) check that cookie_domain is properly filled in.");
+          }
+
+          //test #2: service endpoints reachable?
+          $endpoint = $config->endpoint;
+
+          $apiObj = new RemoteAPI($base_url, $endpoint, 1, $drupalsession['session_name'], $drupalsession['session_id']);
+          // Connect to Drupal with this session
+          $ret = $apiObj->Connect();
+
+          if($ret){
+            if($ret->user->uid){
+              $tests['session']=array('success'=>$ret, 'message'=>"User session data reachable and you are logged in!");
+            }
+            else{
+              $tests['session']=array('success'=>$ret, 'message'=>"User session data reachable but you aren't logged in!");
+            }
+          }
+          else{
+            $tests['session']=array('success'=>(bool)$ret, 'message'=> "User session data unreachable. Ensure that the server is reachable, and that the 'session/connect' service is enable for this endpoint");
+          }
+
+          //test #3: authentication
+          $apiObj = new RemoteAPI($base_url, $endpoint);
+          // Required for authentication, and all other operations:
+          $ret = $apiObj->Login($remote_user, $remote_pw, true);
+
+          if($ret->info['http_code']==404){
+            $tests['auth']=array('success'=>false, 'message'=> "Login service unreachable. Check that User/actions/login is enabled in the Drupal moodle services endpoint.");
+          }
+          elseif($ret->info['http_code']==401){
+            $tests['auth']=array('success'=>false, 'message'=> "Login to drupal failed. Check that the username and password are correct.");
+          }
+          elseif($ret->info['http_code']==200){
+            $tests['auth']=array('success'=>true, 'message'=> "Logged in to drupal!");
+          }
+
+          //test #4: user listings
+          $drupal_users = $apiObj->Index('muser', null, true); //get a full listing, in debug mode
+
+          if($drupal_users==null){
+            $tests['userlisting']=array('success'=>false, 'message'=> "an authentication error occurred");
+          }
+          elseif($drupal_users->info['http_code']==404){
+            $tests['userlisting']=array('success'=>false, 'message'=> "The muser resource is not available in the drupal service endpoint.");
+          }
+          elseif($drupal_users->info['http_code']==403){
+            $tests['userlisting']=array('success'=>false, 'message'=> "The user account specified does not have access to the muser service. Check that the access permissions are correct in the muser view's service display");
+          }
+          elseif($drupal_users->info['http_code']==200 && !count($drupal_users->userlist)){
+            $tests['userlisting']=array('success'=>false, 'message'=> "everything worked, but no users were returned. Are the filters set up properly in the view?");
+          }
+          elseif($drupal_users->info['http_code']==200 && count($drupal_users->userlist)){
+            $tests['userlisting']=array('success'=>true, 'message'=> "User listings are active!");
+          }
+        }
+        else{
+          $tests['configuration']=array('success'=>false, 'message'=> "no configuration data yet!");
+        }
         include 'config.html';
     }
     /** 
