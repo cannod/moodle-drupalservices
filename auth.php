@@ -451,7 +451,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
               $tests['session']=array('success'=>true, 'message'=>"system/connect: User session data reachable and you are logged in!");
             }
             elseif($ret->info['http_code']==406){ // code for unsupported http request
-              $tests['session']=array('success'=>false, 'message'=>"system/connect: The drupal services endpoint is not accepting JSON requests. Please confirm that at least the JSON response formatter is checked.");
+              $tests['session']=array('success'=>false, 'message'=>"system/connect: The drupal services endpoint is not accepting JSON requests. Please confirm that at least the JSON response formatter is checked, and at least the \"application/x-www-form-urlencoded\" request parsing header. (application/json is also recommended)");
             }
             else{
               $tests['session']=array('success'=>false, 'message'=>"system/connect: User session data reachable but you aren't logged in!");
@@ -468,7 +468,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
           $ret = $apiObj->Login($remote_user, $remote_pw, true);
 
           if($ret->info['http_code']==406){
-            $tests['auth']=array('success'=>false, 'message'=> "user/login: The drupal services endpoint is not accepting JSON requests. Please confirm that at least the JSON response formatter is checked.");
+            $tests['auth']=array('success'=>false, 'message'=> "user/login: The drupal services endpoint is not accepting JSON requests. Please confirm that at least the JSON response formatter is checked, and at least the \"application/x-www-form-urlencoded\" request parsing header. (application/json is also recommended)");
           }
           if($ret->info['http_code']==404){
             $tests['auth']=array('success'=>false, 'message'=> "user/login: Login service unreachable. Check that User/actions/login is enabled in the Drupal moodle services endpoint.");
