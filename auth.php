@@ -255,10 +255,10 @@ class auth_plugin_drupalservices extends auth_plugin_base
         print_r($apiObj);
         // list external users
         //this query needs to pass in the last indexed id (uid or vid) in order to provide new/update data
-        $last_entry=get_config('druaplservices','lastupdate');
+        $last_entry=get_config('auth/drupalservices','lastupdate');
         //change_id should be the name of a filter that returns everything *greater* than the value passed
-        // this allows for only changes since the last run to be imported.
-        $drupal_users = $apiObj->Index('auth_drupalservices?change_id='.$last_entry);
+        // doing this allows for only changes since the last run to be imported.
+        $drupal_users = $apiObj->Index('muser','?change_id='.$last_entry);
         if (is_null($drupal_users) || empty($drupal_users)) {
             die("ERROR: Problems trying to get index of users!\n");
         }
@@ -326,16 +326,20 @@ class auth_plugin_drupalservices extends auth_plugin_base
                     print "Skipping anon user - uid $uid\n";
                     continue;
                 }
-                print_string('auth_drupalservicesupdateuser', 'auth_drupalservices', $drupal_user->name . '(' . $drupal_user->uid . ')' . "\n");
-                $user = $this->create_update_user($drupal_user);
-                if (empty($user)) {
-                    // Something went wrong while creating the user
-                    print_error('auth_drupalservicescreateaccount', 'auth_drupalservices', $drupal_user->name);
-                    continue; //Next user
+
+                try{
+                  $user = $this->create_update_user($drupal_user);
                 }
-            }
-            if($last_entry <> $drupal_user->change_id){
-              set_config('lastupdate',$drupal_user->change_id,'auth_drupalservices');
+                catch(Exception $e){
+                  print("User {$drupal_user->name} failed to import. Check the following data:\n");
+                  print_r($drupal_user);
+                  continue; //Next user
+                }
+                print_string('auth_drupalservicesupdateuser', 'auth_drupalservices', $drupal_user->name . '(' . $drupal_user->uid . ')' . "\n");
+                if($last_entry < $drupal_user->change_id){
+                  $last_entry = $drupal_user->change_id;
+                  set_config('lastupdate',$drupal_user->change_id,'auth/drupalservices');
+                }
             }
         } // END OF DO UPDATES
         // Now do cohorts
