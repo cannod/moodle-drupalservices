@@ -190,7 +190,7 @@ class RemoteAPI {
 
   // *****************************************************************************
   // Connect: uses the cURL library to handle system connect 
-  public function Connect() {
+  public function Connect($debug=false) {
 
     $callerId = 'RemoteAPI->Connect';
     if (!$this->VerifyLoggedIn( $callerId )) {
@@ -203,6 +203,11 @@ class RemoteAPI {
     $url = $this->gateway.$this->endpoint.'/system/connect';
 
     $ret = $this->CurlHttpRequest($callerId, $url, 'POST', "", true, true);
+
+    if($debug){
+      return $ret;
+    }
+
     if ($ret->info['http_code'] != 200) {
       return NULL;
     }
