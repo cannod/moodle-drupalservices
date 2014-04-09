@@ -29,6 +29,17 @@
     $yesno = array( get_string('no'), get_string('yes') );
 
 ?>
+
+<div id="testmessages">
+    <div>The following messages are the results of tests of the configuration below. Use these to guide you through the setup and configuration of the Drupal Services plugin. If you see any items with 'fail', you'll need to resolve them in order for this plugin to work.</div>
+    <?php foreach($tests as $testresult):?>
+    <div class="testmessage">
+        <span class="status <?php print ($testresult['success'])?"success":"fail";?>"><b><?php print ($testresult['success'])?"Success":"Fail";?> :</b> </span>
+        <span class="message"><?php print ($testresult['message']);?></span>
+    </div>
+    <?php endforeach?>
+</div>
+
 <table cellspacing="0" cellpadding="5" border="0">
 
 <tr valign="top" class="required">

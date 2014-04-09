@@ -248,11 +248,13 @@ class auth_plugin_drupalservices extends auth_plugin_base
         $endpoint = $this->config->endpoint;
         $apiObj = new RemoteAPI($base_url, $endpoint);
         // Required for authentication, and all other operations:
-        $ret = $apiObj->Login($remote_user, $remote_pw);
-        if (is_null($ret)) {
-            die("ERROR: Login error!\n");
+        $ret = $apiObj->Login($remote_user, $remote_pw, true);
+        if ($ret->info['http_code']==404) {
+          die("ERROR: Login service unreachable!\n");
         }
-        print_r($apiObj);
+        if ($ret->info['http_code']==401) {
+          die("ERROR: Login failed - check username and password!\n");
+        }
         // list external users
         //this query needs to pass in the last indexed id (uid or vid) in order to provide new/update data
         $last_entry=get_config('auth/drupalservices','lastupdate');
@@ -435,6 +437,86 @@ class auth_plugin_drupalservices extends auth_plugin_base
      */
     function config_form($config, $err, $user_fields)
     {
+        if($config->hostname){
+          $base_url = $config->hostname;
+          $drupalsession = $this->get_drupal_session($base_url);
+          $remote_user = $config->remote_user;
+          $remote_pw = $config->remote_pw;
+
+          //test #1: cookie found?
+          if($drupalsession){
+            $tests['cookie']=array('success'=>(bool)$drupalsession, 'message'=>"cookies: SSO Cookie discovered properly");
+          }
+          else{
+            $tests['cookie']=array('success'=>(bool)$drupalsession, 'message'=>"cookies: SSO Cookie not discovered. 1) check that you are currently logged in to drupal. 2) Check that Drupal's session cookie is configured in settings.php 3) check that cookie_domain is properly filled in.");
+          }
+
+          //test #2: service endpoints reachable?
+          $endpoint = $config->endpoint;
+
+          $apiObj = new RemoteAPI($base_url, $endpoint, 1, $drupalsession['session_name'], $drupalsession['session_id']);
+          // Connect to Drupal with this session
+          $ret = $apiObj->Connect(true);
+
+          if($ret){
+            if($ret->response->user->uid){
+              $tests['session']=array('success'=>true, 'message'=>"system/connect: User session data reachable and you are logged in!");
+            }
+            elseif($ret->info['http_code']==406){ // code for unsupported http request
+              $tests['session']=array('success'=>false, 'message'=>"system/connect: The drupal services endpoint is not accepting JSON requests. Please confirm that at least the JSON response formatter is checked, and at least the \"application/x-www-form-urlencoded\" request parsing header. (application/json is also recommended)");
+            }
+            else{
+              $tests['session']=array('success'=>false, 'message'=>"system/connect: User session data reachable but you aren't logged in!");
+            }
+
+          }
+          else{
+            $tests['session']=array('success'=>false, 'message'=> "system/connect: User session data unreachable. Ensure that the server is reachable, and that the 'session/connect' service is enable for this endpoint");
+          }
+
+          //test #3: authentication
+          $apiObj = new RemoteAPI($base_url, $endpoint);
+          // Required for authentication, and all other operations:
+          $ret = $apiObj->Login($remote_user, $remote_pw, true);
+
+          if($ret->info['http_code']==406){
+            $tests['auth']=array('success'=>false, 'message'=> "user/login: The drupal services endpoint is not accepting JSON requests. Please confirm that at least the JSON response formatter is checked, and at least the \"application/x-www-form-urlencoded\" request parsing header. (application/json is also recommended)");
+          }
+          if($ret->info['http_code']==404){
+            $tests['auth']=array('success'=>false, 'message'=> "user/login: Login service unreachable. Check that User/actions/login is enabled in the Drupal moodle services endpoint.");
+          }
+          elseif($ret->info['http_code']==401 && strpos($ret->error, 'Unauthorized: Missing required argument name')!==false){
+            $tests['auth']=array('success'=>false, 'message'=> "user/login: The User/Login endpoint resource needs to use the 1.0 API version.");
+          }
+          elseif($ret->info['http_code']==401){
+            $tests['auth']=array('success'=>false, 'message'=> "user/login: Login to drupal failed. Check that the username and password are correct.");
+          }
+          elseif($ret->info['http_code']==200){
+            $tests['auth']=array('success'=>true, 'message'=> "user/login: Logged in to drupal!");
+          }
+
+          //test #4: user listings
+          $drupal_users = $apiObj->Index('muser', null, true); //get a full listing, in debug mode
+
+          if($drupal_users==null){
+            $tests['userlisting']=array('success'=>false, 'message'=> "muser/Index: An authentication error occurred");
+          }
+          elseif($drupal_users->info['http_code']==404){
+            $tests['userlisting']=array('success'=>false, 'message'=> "muser/Index: The muser resource is not available in the drupal service endpoint.");
+          }
+          elseif($drupal_users->info['http_code']==403){
+            $tests['userlisting']=array('success'=>false, 'message'=> "muser/Index: The user account specified does not have access to the muser service. Check that the access permissions are correct in the muser view's service display");
+          }
+          elseif($drupal_users->info['http_code']==200 && !count($drupal_users->userlist)){
+            $tests['userlisting']=array('success'=>false, 'message'=> "muser/Index: No users were returned. Are the filters set up properly in the view?");
+          }
+          elseif($drupal_users->info['http_code']==200 && count($drupal_users->userlist)){
+            $tests['userlisting']=array('success'=>true, 'message'=> "muser/Index: User listings are active!");
+          }
+        }
+        else{
+          $tests['configuration']=array('success'=>false, 'message'=> "no configuration data yet!");
+        }
         include 'config.html';
     }
     /** 

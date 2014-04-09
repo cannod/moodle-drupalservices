@@ -190,7 +190,7 @@ class RemoteAPI {
 
   // *****************************************************************************
   // Connect: uses the cURL library to handle system connect 
-  public function Connect() {
+  public function Connect($debug=false) {
 
     $callerId = 'RemoteAPI->Connect';
     if (!$this->VerifyLoggedIn( $callerId )) {
@@ -203,6 +203,11 @@ class RemoteAPI {
     $url = $this->gateway.$this->endpoint.'/system/connect';
 
     $ret = $this->CurlHttpRequest($callerId, $url, 'POST', "", true, true);
+
+    if($debug){
+      return $ret;
+    }
+
     if ($ret->info['http_code'] != 200) {
       return NULL;
     }
@@ -214,7 +219,7 @@ class RemoteAPI {
  
   // *****************************************************************************
   // Login: uses the cURL library to handle login
-  public function Login( $username, $password ) {
+  public function Login( $username, $password, $debug=false ) {
    
     $callerId = 'RemoteAPI->Login';
     if (!$this->VerifyUnconnected( $callerId )) {
@@ -225,17 +230,19 @@ class RemoteAPI {
     $data = array( 'username' => $username, 'password' => $password, );
     $data = http_build_query($data, '', '&');
     $ret = $this->CurlHttpRequest($callerId, $url, 'POST', $data, false);
-    if ($ret->info['http_code'] != 200) {
-      return NULL;
-    }
-    else {
+    if ($ret->info['http_code'] == 200) { //success!
       $this->sessid  = $ret->response->sessid;
       $this->session = $ret->response->session_name;
       $this->status = RemoteAPI::RemoteAPI_status_loggedin;
       $this->CSRFToken = $this->GetCSRFToken();
-      return true; // success!
     }
- 
+
+    if($debug){
+      return $ret;
+    }
+    // return true if the query was successfull, false otherwise
+    return ($ret->info['http_code']==200);
+
   }  // end of Login() definition
  
   // *****************************************************************************
@@ -266,15 +273,18 @@ class RemoteAPI {
   // **************************************************************************
   // perform an 'Index' operation on a resource type using cURL.
   // Return an array of resource descriptions, or NULL if an error occurs
-  public function Index( $resourceType, $options = NULL ) {
+  public function Index( $resourceType, $options = NULL, $debug=false ) {
    
     $callerId = 'RemoteAPI->Index';
     if (!$this->VerifyLoggedIn( $callerId )) {
-      return NULL; // error
+      return NULL; // login error
     }
    
     $url = $this->gateway.$this->endpoint.'/'.$resourceType . $options;
     $ret = $this->CurlHttpRequest($callerId, $url, 'GET', NULL, true);
+    if($debug){
+      return (object)array('userlist'=>$ret->response,'info'=>$ret->info);
+    }
     return $ret->response;
   }
 
