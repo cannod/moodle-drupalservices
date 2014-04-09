@@ -473,6 +473,9 @@ class auth_plugin_drupalservices extends auth_plugin_base
           if($ret->info['http_code']==404){
             $tests['auth']=array('success'=>false, 'message'=> "user/login: Login service unreachable. Check that User/actions/login is enabled in the Drupal moodle services endpoint.");
           }
+          elseif($ret->info['http_code']==401 && strpos($ret->error, 'Unauthorized: Missing required argument name')!==false){
+            $tests['auth']=array('success'=>false, 'message'=> "user/login: The User/Login endpoint resource needs to use the 1.0 API version.");
+          }
           elseif($ret->info['http_code']==401){
             $tests['auth']=array('success'=>false, 'message'=> "user/login: Login to drupal failed. Check that the username and password are correct.");
           }
