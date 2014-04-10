@@ -256,8 +256,6 @@ class auth_plugin_drupalservices extends auth_plugin_base
           die("ERROR: Login failed - check username and password!\n");
         }
         // list external users
-        //this query needs to pass in the last indexed id (uid or vid) in order to provide new/update data
-        $last_entry=get_config('auth/drupalservices','lastupdate');
         //change_id should be the name of a filter that returns everything *greater* than the value passed
         // doing this allows for only changes since the last run to be imported.
         $drupal_users = $apiObj->Index('muser','?change_id='.$last_entry);
@@ -322,6 +320,11 @@ class auth_plugin_drupalservices extends auth_plugin_base
             // Not very efficient but hey?
             print_string('auth_drupalservicesuserstoupdate', 'auth_drupalservices', count($userlist));
             print "\n";
+            //this query needs to pass in the last indexed id (uid or vid) in order to provide new/update data
+            $last_entry=get_config('auth/drupalservices','lastupdate');
+            // if a record throws an error on import, the process probably shouldn't move forward until
+            // it is resolved
+            $error_entry_id=0;
             $drupal_user=null;
             foreach ($drupal_users as $drupal_user) {
                 if ($drupal_user->uid < 1) { //No anon
@@ -335,14 +338,25 @@ class auth_plugin_drupalservices extends auth_plugin_base
                 catch(Exception $e){
                   print("User {$drupal_user->name} failed to import. Check the following data:\n");
                   print_r($drupal_user);
+                  // track this user (the lowest change id) as the error user
+                  if($error_entry_id == 0){
+                    $error_entry_id=$drupal_user->change_id;
+                  }
                   continue; //Next user
                 }
                 print_string('auth_drupalservicesupdateuser', 'auth_drupalservices', $drupal_user->name . '(' . $drupal_user->uid . ')' . "\n");
                 if($last_entry < $drupal_user->change_id){
                   $last_entry = $drupal_user->change_id;
-                  set_config('lastupdate',$drupal_user->change_id,'auth/drupalservices');
                 }
             }
+            if($error_entry_id){
+              $last_entry=error_entry_id;
+            }
+            // don't change the value until successful import has taken place
+            if($last_entry <> get_config('auth/drupalservices','lastupdate')){
+              set_config('lastupdate',$drupal_user->change_id,'auth/drupalservices');
+            }
+
         } // END OF DO UPDATES
         // Now do cohorts
         if (($do_updates) && ($this->config->cohorts != 0)) {
