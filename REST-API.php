@@ -180,7 +180,7 @@ class RemoteAPI {
     $ret->error    = curl_error($ch);
     $ret->info     = curl_getinfo($ch);
     curl_close($ch);
-   
+
     if ($ret->info['http_code'] == 200) {
       $ret->response = json_decode($ret->response);
     }
@@ -251,7 +251,7 @@ class RemoteAPI {
   // *****************************************************************************
   // Logout: uses the cURL library to handle logout
   public function Logout() {
-   
+
     $callerId = 'RemoteAPI->Logout';
     if (!$this->VerifyLoggedIn( $callerId )) {
       return NULL; // error
@@ -261,6 +261,9 @@ class RemoteAPI {
 
     $ret = $this->CurlHttpRequest($callerId, $url, 'POST', NULL, true, true);
     if ($ret->info['http_code'] != 200) {
+      if (!empty($ret->error)) {
+        print $ret->error . PHP_EOL;
+      }
       return NULL;
     }
     else {
@@ -282,7 +285,7 @@ class RemoteAPI {
     if (!$this->VerifyLoggedIn( $callerId )) {
       return NULL; // login error
     }
-   
+
     $url = $this->gateway.$this->endpoint.'/'.$resourceType . $options;
     $ret = $this->CurlHttpRequest($callerId, $url, 'GET', NULL, true);
     if($debug){
