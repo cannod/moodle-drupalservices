@@ -229,11 +229,14 @@ class RemoteAPI {
     $url = $this->gateway.$this->endpoint.'/user/login';
     $data = array( 'username' => $username, 'password' => $password, );
     $data = http_build_query($data, '', '&');
-    $ret = $this->CurlHttpRequest($callerId, $url, 'POST', $data, false);
+    // Get a CSRF Token for login to be able to login multiple times without logging out.
+    $this->CSRFToken = $this->GetCSRFToken();
+    $ret = $this->CurlHttpRequest($callerId, $url, 'POST', $data, false, true);
     if ($ret->info['http_code'] == 200) { //success!
       $this->sessid  = $ret->response->sessid;
       $this->session = $ret->response->session_name;
       $this->status = RemoteAPI::RemoteAPI_status_loggedin;
+      // Update the CSRF Token after successful login
       $this->CSRFToken = $this->GetCSRFToken();
     }
 
