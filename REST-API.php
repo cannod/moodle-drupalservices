@@ -180,7 +180,7 @@ class RemoteAPI {
     $ret->error    = curl_error($ch);
     $ret->info     = curl_getinfo($ch);
     curl_close($ch);
-   
+
     if ($ret->info['http_code'] == 200) {
       $ret->response = json_decode($ret->response);
     }
@@ -229,11 +229,14 @@ class RemoteAPI {
     $url = $this->gateway.$this->endpoint.'/user/login';
     $data = array( 'username' => $username, 'password' => $password, );
     $data = http_build_query($data, '', '&');
-    $ret = $this->CurlHttpRequest($callerId, $url, 'POST', $data, false);
+    // Get a CSRF Token for login to be able to login multiple times without logging out.
+    $this->CSRFToken = $this->GetCSRFToken();
+    $ret = $this->CurlHttpRequest($callerId, $url, 'POST', $data, false, true);
     if ($ret->info['http_code'] == 200) { //success!
       $this->sessid  = $ret->response->sessid;
       $this->session = $ret->response->session_name;
       $this->status = RemoteAPI::RemoteAPI_status_loggedin;
+      // Update the CSRF Token after successful login
       $this->CSRFToken = $this->GetCSRFToken();
     }
 
@@ -248,7 +251,7 @@ class RemoteAPI {
   // *****************************************************************************
   // Logout: uses the cURL library to handle logout
   public function Logout() {
-   
+
     $callerId = 'RemoteAPI->Logout';
     if (!$this->VerifyLoggedIn( $callerId )) {
       return NULL; // error
@@ -258,6 +261,9 @@ class RemoteAPI {
 
     $ret = $this->CurlHttpRequest($callerId, $url, 'POST', NULL, true, true);
     if ($ret->info['http_code'] != 200) {
+      if (!empty($ret->error)) {
+        print $ret->error . PHP_EOL;
+      }
       return NULL;
     }
     else {
@@ -279,7 +285,7 @@ class RemoteAPI {
     if (!$this->VerifyLoggedIn( $callerId )) {
       return NULL; // login error
     }
-   
+
     $url = $this->gateway.$this->endpoint.'/'.$resourceType . $options;
     $ret = $this->CurlHttpRequest($callerId, $url, 'GET', NULL, true);
     if($debug){

@@ -255,6 +255,13 @@ class auth_plugin_drupalservices extends auth_plugin_base
         if ($ret->info['http_code']==401) {
           die("ERROR: Login failed - check username and password!\n");
         }
+        elseif ($ret->info['http_code']!==200) {
+          $error = "ERROR: Login to drupal failed with http code " . $ret->info['http_code'];
+          if (!empty($ret->error)) {
+            $error .= PHP_EOL . $ret->error . PHP_EOL;
+          }
+          die($error);
+        }
         // list external users
         $drupal_users = $apiObj->Index('muser');
         if (is_null($drupal_users) || empty($drupal_users)) {
@@ -481,6 +488,12 @@ class auth_plugin_drupalservices extends auth_plugin_base
           }
           elseif($ret->info['http_code']==200){
             $tests['auth']=array('success'=>true, 'message'=> "user/login: Logged in to drupal!");
+          }
+          else {
+            $tests['auth']=array('success'=>false, 'message'=> "user/login: Login to drupal failed with http code " . $ret->info['http_code']);
+            if (!empty($ret->error)) {
+              $tests['auth']['message'] .= PHP_EOL . $ret->error;
+            }
           }
 
           //test #4: user listings
