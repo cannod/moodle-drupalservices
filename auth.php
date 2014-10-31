@@ -437,39 +437,11 @@ class auth_plugin_drupalservices extends auth_plugin_base
           $drupalsession = $this->get_drupal_session($base_url);
           $remote_user = $config->remote_user;
           $remote_pw = $config->remote_pw;
-
-          //test #1: cookie found?
-          if($drupalsession){
-            $tests['cookie']=array('success'=>(bool)$drupalsession, 'message'=>"cookies: SSO Cookie discovered properly");
-          }
-          else{
-            $tests['cookie']=array('success'=>(bool)$drupalsession, 'message'=>"cookies: SSO Cookie not discovered. 1) check that you are currently logged in to drupal. 2) Check that Drupal's session cookie is configured in settings.php 3) check that cookie_domain is properly filled in.");
-          }
-
-          //test #2: service endpoints reachable?
           $endpoint = $config->endpoint;
 
-          $apiObj = new RemoteAPI($base_url, $endpoint, 1, $drupalsession['session_name'], $drupalsession['session_id']);
-          // Connect to Drupal with this session
-          $ret = $apiObj->Connect(true);
+          //these tests were reordered to support configuration importing from the drupal sister module to this plugin.
 
-          if($ret){
-            if($ret->response->user->uid){
-              $tests['session']=array('success'=>true, 'message'=>"system/connect: User session data reachable and you are logged in!");
-            }
-            elseif($ret->info['http_code']==406){ // code for unsupported http request
-              $tests['session']=array('success'=>false, 'message'=>"system/connect: The drupal services endpoint is not accepting JSON requests. Please confirm that at least the JSON response formatter is checked, and at least the \"application/x-www-form-urlencoded\" request parsing header. (application/json is also recommended)");
-            }
-            else{
-              $tests['session']=array('success'=>false, 'message'=>"system/connect: User session data reachable but you aren't logged in!");
-            }
-
-          }
-          else{
-            $tests['session']=array('success'=>false, 'message'=> "system/connect: User session data unreachable. Ensure that the server is reachable, and that the 'session/connect' service is enable for this endpoint");
-          }
-
-          //test #3: authentication
+          //test #1: authentication
           $apiObj = new RemoteAPI($base_url, $endpoint);
           // Required for authentication, and all other operations:
           $ret = $apiObj->Login($remote_user, $remote_pw, true);
@@ -496,7 +468,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
             }
           }
 
-          //test #4: user listings
+          //test #2: user listings
           $drupal_users = $apiObj->Index('muser', null, true); //get a full listing, in debug mode
 
           if($drupal_users==null){
@@ -512,8 +484,39 @@ class auth_plugin_drupalservices extends auth_plugin_base
             $tests['userlisting']=array('success'=>false, 'message'=> "muser/Index: No users were returned. Are the filters set up properly in the view?");
           }
           elseif($drupal_users->info['http_code']==200 && count($drupal_users->userlist)){
+            //if($drupal_users->userlist[0]['asdf'])
             $tests['userlisting']=array('success'=>true, 'message'=> "muser/Index: User listings are active!");
           }
+
+          //test #3: cookie found?
+          if($drupalsession){
+            $tests['cookie']=array('success'=>(bool)$drupalsession, 'message'=>"cookies: SSO Cookie discovered properly");
+          }
+          else{
+            $tests['cookie']=array('success'=>(bool)$drupalsession, 'message'=>"cookies: SSO Cookie not discovered. 1) check that you are currently logged in to drupal. 2) Check that Drupal's session cookie is configured in settings.php 3) check that cookie_domain is properly filled in.");
+          }
+
+          //test #4: service endpoints reachable?
+          $apiObj = new RemoteAPI($base_url, $endpoint, 1, $drupalsession['session_name'], $drupalsession['session_id']);
+          // Connect to Drupal with this session
+          $ret = $apiObj->Connect(true);
+
+          if($ret){
+            if($ret->response->user->uid){
+              $tests['session']=array('success'=>true, 'message'=>"system/connect: User session data reachable and you are logged in!");
+            }
+            elseif($ret->info['http_code']==406){ // code for unsupported http request
+              $tests['session']=array('success'=>false, 'message'=>"system/connect: The drupal services endpoint is not accepting JSON requests. Please confirm that at least the JSON response formatter is checked, and at least the \"application/x-www-form-urlencoded\" request parsing header. (application/json is also recommended)");
+            }
+            else{
+              $tests['session']=array('success'=>false, 'message'=>"system/connect: User session data reachable but you aren't logged in!");
+            }
+
+          }
+          else{
+            $tests['session']=array('success'=>false, 'message'=> "system/connect: User session data unreachable. Ensure that the server is reachable, and that the 'session/connect' service is enable for this endpoint");
+          }
+
         }
         else{
           $tests['configuration']=array('success'=>false, 'message'=> "no configuration data yet!");
