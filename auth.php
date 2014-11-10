@@ -26,6 +26,13 @@ require_once $CFG->libdir . '/authlib.php';
 require_once $CFG->dirroot . '/cohort/lib.php';
 require_once $CFG->dirroot . '/auth/drupalservices/REST-API.php';
 
+define(AUTH_DRUPALSERVICES_SSO_SUBDOMAIN, 1);   //this is bitmask 0x001
+define(AUTH_DRUPALSERVICES_SSO_SUBDIRECTORY, 2); // this is bitmask 0x010
+define(AUTH_DRUPALSERVICES_SSO_BOTH, 3);  //this is bitmask 0x011
+define(AUTH_DRUPALSERVICES_SSO_CUSTOM, 4);// this is bitmask 0x100
+
+
+
 /**
  * class auth_plugin_drupalservices 
  *
@@ -45,7 +52,8 @@ class auth_plugin_drupalservices extends auth_plugin_base
         $this->authtype = 'drupalservices';
         $this->config = get_config('auth/drupalservices');
     }
-    /** 
+
+    /**
      * This plugin is for SSO only; Drupal handles the login
      *
      * @param string $username the username 
@@ -68,7 +76,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
     {
         global $CFG, $USER, $SESSION, $DB;
         // Check if we have a Drupal session.
-        $base_url = $this->config->hostname;
+        $base_url = $this->config->endpoint_uri;
         $endpoint = $this->config->endpoint;
         $drupalsession = $this->get_drupal_session($base_url);
         if (empty($drupalsession)) {
@@ -99,7 +107,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
         $session_id = $drupalsession['session_id'];
         $SESSION->drupal_session_name = $session_name;
         $SESSION->drupal_session_id = $session_id;
-        $apiObj = new RemoteAPI($base_url, $endpoint, 1, $session_name, $session_id);
+        $apiObj = new RemoteAPI($base_url, 1, $session_name, $session_id);
         // Connect to Drupal with this session
         $ret = $apiObj->Connect();
         if (is_null($ret)) {
@@ -215,13 +223,12 @@ class auth_plugin_drupalservices extends auth_plugin_base
     function logoutpage_hook()
     {
         global $CFG, $SESSION;
-        $base_url = $this->config->hostname;
-        $endpoint = $this->config->endpoint;
+        $base_url = $this->config->endpoint_uri;
         if (isset($SESSION->drupal_session_name) && isset($SESSION->drupal_session_id)) {
             // logout of drupal.
             $session_name = $SESSION->drupal_session_name;
             $session_id = $SESSION->drupal_session_id;
-            $apiObj = new RemoteAPI($base_url, $endpoint, 1, $session_name, $session_id);
+            $apiObj = new RemoteAPI($base_url, 1, $session_name, $session_id);
             $ret = $apiObj->Logout();
             if (is_null($ret)) {
                 return;
@@ -244,9 +251,8 @@ class auth_plugin_drupalservices extends auth_plugin_base
         // process users in Moodle that no longer exist in Drupal
         $remote_user = $this->config->remote_user;
         $remote_pw = $this->config->remote_pw;
-        $base_url = $this->config->hostname;
-        $endpoint = $this->config->endpoint;
-        $apiObj = new RemoteAPI($base_url, $endpoint);
+        $base_url = $this->config->endpoint_uri;
+        $apiObj = new RemoteAPI($base_url);
         // Required for authentication, and all other operations:
         $ret = $apiObj->Login($remote_user, $remote_pw, true);
         if ($ret->info['http_code']==404) {
@@ -430,19 +436,22 @@ class auth_plugin_drupalservices extends auth_plugin_base
      *
      * @return int TRUE
      */
-    function config_form($config, $err, $user_fields)
-    {
+    // todo: remove this function after moving over the tests
+    function remove_config_form($config, $err, $user_fields){
+      global $CFG, $DB, $PAGE, $OUTPUT;
+
         if($config->hostname){
-          $base_url = $config->hostname;
+          $base_url = $config->endpoint_uri;
           $drupalsession = $this->get_drupal_session($base_url);
           $remote_user = $config->remote_user;
           $remote_pw = $config->remote_pw;
-          $endpoint = $config->endpoint;
 
           //these tests were reordered to support configuration importing from the drupal sister module to this plugin.
+          //the first 3 tests verify that the moodle service user can connect in and pull information down
+          //the remainder of the tests verify SSO capability.
 
           //test #1: authentication
-          $apiObj = new RemoteAPI($base_url, $endpoint);
+          $apiObj = new RemoteAPI($base_url);
           // Required for authentication, and all other operations:
           $ret = $apiObj->Login($remote_user, $remote_pw, true);
 
@@ -469,25 +478,31 @@ class auth_plugin_drupalservices extends auth_plugin_base
           }
 
           //test #2: user listings
-          $drupal_users = $apiObj->Index('muser', null, true); //get a full listing, in debug mode
-
+          // this test depends on at least one unblocked user existing
+          $drupal_users = $apiObj->Index('user', "?fields=uid,name,mail,status&page=1&pagesize=1&parameters[status]=1", true); //get a full listing, in debug mode
           if($drupal_users==null){
-            $tests['userlisting']=array('success'=>false, 'message'=> "muser/Index: An authentication error occurred");
+            $tests['userlisting']=array('success'=>false, 'message'=> "User/Index: An authentication error occurred");
           }
           elseif($drupal_users->info['http_code']==404){
-            $tests['userlisting']=array('success'=>false, 'message'=> "muser/Index: The muser resource is not available in the drupal service endpoint.");
+            $tests['userlisting']=array('success'=>false, 'message'=> "User/Index: The User/Index resource is not available in the drupal service endpoint.");
           }
           elseif($drupal_users->info['http_code']==403){
-            $tests['userlisting']=array('success'=>false, 'message'=> "muser/Index: The user account specified does not have access to the muser service. Check that the access permissions are correct in the muser view's service display");
+            $tests['userlisting']=array('success'=>false, 'message'=> "User/Index: The user account specified does not have access to the User service. Check that the access permissions are correct");
           }
           elseif($drupal_users->info['http_code']==200 && !count($drupal_users->userlist)){
-            $tests['userlisting']=array('success'=>false, 'message'=> "muser/Index: No users were returned. Are the filters set up properly in the view?");
+            $tests['userlisting']=array('success'=>false, 'message'=> "User/Index: User listings are active, but no un-blocked users were found.");
           }
           elseif($drupal_users->info['http_code']==200 && count($drupal_users->userlist)){
-            //if($drupal_users->userlist[0]['asdf'])
-            $tests['userlisting']=array('success'=>true, 'message'=> "muser/Index: User listings are active!");
+            $tests['userlisting']=array('success'=>true, 'message'=> "User/Index: User listings are active!");
           }
 
+//test    //Test #3: can a full user be retrieved?
+          $specific_drupal_user=$apiObj->Index('user/'.$drupal_users->userlist[0]->uid);
+          if(!is_object($specific_drupal_user)){
+            $tests['userretrive']=array('success'=>false, 'message'=> "User/Retrieve: Active user profiles cannot be retrieved");
+          } elseif($specific_drupal_user->uid > 0){
+            $tests['userretrive']=array('success'=>true, 'message'=> "User/Retrieve: Active user profiles can be retrieved!");
+          }
           //test #3: cookie found?
           if($drupalsession){
             $tests['cookie']=array('success'=>(bool)$drupalsession, 'message'=>"cookies: SSO Cookie discovered properly");
@@ -497,7 +512,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
           }
 
           //test #4: service endpoints reachable?
-          $apiObj = new RemoteAPI($base_url, $endpoint, 1, $drupalsession['session_name'], $drupalsession['session_id']);
+          $apiObj = new RemoteAPI($base_url, 1, $drupalsession['session_name'], $drupalsession['session_id']);
           // Connect to Drupal with this session
           $ret = $apiObj->Connect(true);
 
@@ -521,7 +536,19 @@ class auth_plugin_drupalservices extends auth_plugin_base
         else{
           $tests['configuration']=array('success'=>false, 'message'=> "no configuration data yet!");
         }
-        include 'config.html';
+        $drupal_fields=array_keys((array)$specific_drupal_user);
+
+      $drupalssosettings = new admin_settingpage('drupalssosettings', new lang_string('ssosettings', 'badges'),
+        array('auth/drupalservices:settingspage'));
+//
+      $drupalssosettings->add(new admin_setting_configtext('auth/drupalservices/endpoint',
+        new lang_string('auth_drupalservicesendpoint_key', 'auth_drupalservices'),
+        new lang_string('auth_drupalservicesendpoint', 'auth_drupalservices'),
+        '/drupalsso', PARAM_TEXT));
+
+
+        echo $drupalssosettings->output_html();
+         //require('config.html');
     }
     /** 
      * Processes and stores configuration data for this authentication plugin.
@@ -532,6 +559,13 @@ class auth_plugin_drupalservices extends auth_plugin_base
      */
     function process_config($config)
     {
+      if ($data = data_submitted() and confirm_sesskey()) {
+
+        if (admin_write_settings($data)) {
+          $statusmsg = get_string('changessaved');
+        }
+      }
+      return true;
         // set to defaults if undefined
         if (!isset($config->hostname)) {
             $config->hostname = 'http://';
@@ -657,10 +691,13 @@ class auth_plugin_drupalservices extends auth_plugin_base
      * @param string $base_url This base URL
      *
      * @return array session_name and session_id 
-     */ 
-    function get_drupal_session($base_url)
+     */
+  //todo: refactor out the $base_url requirement. Every instance just uses $cfg->hostname anyways
+    function get_drupal_session($base_url, $cfg=null)
     {
-        $cfg=get_config('auth/drupalservices');
+      if(!$cfg) {
+        $cfg = get_config('auth/drupalservices');
+      }
         // Otherwise use $base_url as session name, without the protocol
         // to use the same session identifiers across http and https.
         list($protocol, $session_name) = explode('://', $base_url, 2);
@@ -680,4 +717,45 @@ class auth_plugin_drupalservices extends auth_plugin_base
             return null;
         }
     }
+
+  //below are static functions that only live here for namespacing reasons
+  function unparse_url($parsed_url) {
+    $scheme   = isset($parsed_url['scheme']) ? $parsed_url['scheme'] . '://' : '';
+    $host     = isset($parsed_url['host']) ? $parsed_url['host'] : '';
+    $port     = isset($parsed_url['port']) ? ':' . $parsed_url['port'] : '';
+    $user     = isset($parsed_url['user']) ? $parsed_url['user'] : '';
+    $pass     = isset($parsed_url['pass']) ? ':' . $parsed_url['pass']  : '';
+    $pass     = ($user || $pass) ? "$pass@" : '';
+    $path     = isset($parsed_url['path']) ? $parsed_url['path'] : '';
+    $query    = isset($parsed_url['query']) ? '?' . $parsed_url['query'] : '';
+    $fragment = isset($parsed_url['fragment']) ? '#' . $parsed_url['fragment'] : '';
+    return "$scheme$user$pass$host$port$path$query$fragment";
+  }
+  // this function strips a name part from the domain name given to it
+  // if $domain is true, a name part from the domain will be removed
+  // if $domain is false, a name part will be removed from the path
+  function dereference_url($hostname, $usedomain=true){
+    if($webroot=parse_url($hostname)){
+      //break up the hostname and path into name parts split up by the "." or "/" notation
+      $domain=explode('.', $webroot['host']);
+      $path=explode('/', $webroot['path']);
+      // stripping out the last name part wouldn't make sense.
+      // this will leave domains like "http://localhost" alone
+      if (count($domain) > 1 && $usedomain){
+        // remove the first (leftmost) domain part, then reassemble the hostname
+        array_shift($domain);
+      }
+      // the request was to remove a file path
+      elseif (!$usedomain && count($path) > 1){
+        array_pop($path);
+      }
+      else{
+        return false;
+      }
+      $webroot['host']=implode(".", $domain);
+      $webroot['path']=implode("/", $path);
+      $hostname=auth_plugin_drupalservices::unparse_url($webroot);
+    }
+    return $hostname;
+  }
 }

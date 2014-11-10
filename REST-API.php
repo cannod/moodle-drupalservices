@@ -12,9 +12,10 @@ class RemoteAPI {
   const RemoteAPI_status_loggedin    = 1;
  
   // *****************************************************************************
-  public function __construct( $gateway, $endpoint, $status = RemoteAPI::RemoteAPI_status_unconnected, $session = '', $sessid = '' ) {
-    $this->gateway    = $gateway;
-    $this->endpoint   = $endpoint;
+  public function __construct( $uri, $status = RemoteAPI::RemoteAPI_status_unconnected, $session = '', $sessid = '' ) {
+    $uri=parse_url($uri);
+    $this->gateway    = $uri['scheme']."://".$uri['host'];
+    $this->endpoint   = $uri['path'];
    
     $this->status  = $status;
     $this->session = $session;
@@ -280,14 +281,14 @@ class RemoteAPI {
   // perform an 'Index' operation on a resource type using cURL.
   // Return an array of resource descriptions, or NULL if an error occurs
   public function Index( $resourceType, $options = NULL, $debug=false ) {
-   
+
     $callerId = 'RemoteAPI->Index';
     if (!$this->VerifyLoggedIn( $callerId )) {
       return NULL; // login error
     }
-
     $url = $this->gateway.$this->endpoint.'/'.$resourceType . $options;
     $ret = $this->CurlHttpRequest($callerId, $url, 'GET', NULL, true);
+
     if($debug){
       return (object)array('userlist'=>$ret->response,'info'=>$ret->info);
     }
