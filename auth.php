@@ -343,7 +343,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
         if (($do_updates) && ($this->config->cohorts != 0)) {
             $cohort_view = $this->config->cohort_view;
             print "Updating cohorts using services view - $cohort_view\n";
-            $context = get_context_instance(CONTEXT_SYSTEM);
+            $context = context_system::instance();
             //$processed_cohorts_list = array();
             $drupal_cohorts = $apiObj->Index($cohort_view);
             if (is_null($drupal_cohorts)) {
