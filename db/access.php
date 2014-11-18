@@ -13,5 +13,3 @@ $capabilities = array(
     )
   ),
 );
-
-print_r("<H1>Loading capabilities!!</H1>");
