@@ -222,15 +222,17 @@ class auth_plugin_drupalservices extends auth_plugin_base
     {
         global $CFG, $SESSION;
         $base_url = $this->config->host_uri;
-        if ($drupalsession=$this->get_drupal_session()) {
+        if ($drupalsession=$this->get_drupal_session() ) {
+          if (get_config('call_logout_service', 'auth_drupalservices')) {
             // logout of drupal.
             $apiObj = new RemoteAPI($base_url, 1, $drupalsession);
             $ret = $apiObj->Logout();
             if (is_null($ret)) {
-                return;
+              return;
             } else {
-                return true;
+              return true;
             }
+          }
         }
         return;
     }
@@ -374,11 +376,13 @@ class auth_plugin_drupalservices extends auth_plugin_base
             }
         } // End of cohorts
         //LOGOUT
-        $ret = $apiObj->Logout();
-        if (is_null($ret)) {
+        if(get_config('call_logout_service', 'auth_drupalservices')) {
+          $ret = $apiObj->Logout();
+          if (is_null($ret)) {
             print "ERROR logging out!\n";
-        } else {
+          } else {
             print "Logged out from drupal services\n";
+          }
         }
     }
     /**

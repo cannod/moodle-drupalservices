@@ -7,14 +7,20 @@ class RemoteAPI {
   public $status;
   public $session;    // the session name (obtained at login)
   public $sessid;     // the session id (obtained at login)
- 
+  public $curldefaults=array(
+    CURLOPT_FAILONERROR => true,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => 4,
+    CURLOPT_SSL_VERIFYPEER => false,
+
+  );
   const RemoteAPI_status_unconnected = 0;
   const RemoteAPI_status_loggedin    = 1;
  
   // *****************************************************************************
-  public function __construct( $host_uri, $status = RemoteAPI::RemoteAPI_status_unconnected, $drupalsession=array() ) {
+  public function __construct( $host_uri, $status = RemoteAPI::RemoteAPI_status_unconnected, $drupalsession=array(), $timeout=60 ) {
     $this->endpoint_uri   = $host_uri.'/moodlesso';
-
+    $this->curldefaults[CURLOPT_TIMEOUT] = $timeout;
     $this->status  = $status;
     if(isset($drupalsession['session_name'])) {
       $this->session = $drupalsession['session_name'];
@@ -41,21 +47,22 @@ class RemoteAPI {
 
     $url = $this->endpoint_uri . '/user/token';
     $response = $this->CurlHttpRequest('RemoteAPI->Token', $url, 'POST', "", true, true);
+    if(!$response->response){
+      print_r($response);
+    }
+    //print_r($response);
     return $response->response->token;
   }
   // *****************************************************************************
   // return the standard set of curl options for a POST
   private function GetCurlPostOptions( $url, $data, $includeAuthCookie = false, $includeCSRFToken = false ) {
     $ret = array( CURLOPT_URL => $url,
-      CURLOPT_FAILONERROR => true,
-      CURLOPT_RETURNTRANSFER => true,
-      CURLOPT_TIMEOUT => 4,
       CURLOPT_HTTPHEADER => array('Accept: application/json'),
       CURLOPT_POST => true,
       CURLOPT_POSTFIELDS => $data,
       CURLOPT_SSL_VERIFYPEER => false,
       // CURLOPT_VERBOSE => true,
-    );
+    ) + $this->curldefaults;
     if ($includeAuthCookie) {
       $ret[CURLOPT_COOKIE] = $this->GetCookieHeader();
     }
@@ -70,13 +77,8 @@ class RemoteAPI {
   // return the standard set of curl options for a GET
   private function GetCurlGetOptions( $url, $includeAuthCookie = false ) {
     $ret = array( CURLOPT_URL => $url,
-      CURLOPT_FAILONERROR => true,
-      CURLOPT_RETURNTRANSFER => true,
-      CURLOPT_BINARYTRANSFER => 1,
-      CURLOPT_TIMEOUT => 3,
       CURLOPT_HTTPHEADER => array('Accept: application/json'),
-      CURLOPT_SSL_VERIFYPEER => false,
-    );
+    ) + $this->curldefaults;
     if ($includeAuthCookie) {
       $ret[CURLOPT_COOKIE] = $this->GetCookieHeader();
     }
@@ -87,15 +89,12 @@ class RemoteAPI {
   // return the standard set of curl options for a PUT
   private function GetCurlPutOptions( $url, $data, $includeAuthCookie = false ) {
     $ret = array( CURLOPT_URL => $url,
-      CURLOPT_FAILONERROR => true,
-      CURLOPT_RETURNTRANSFER => true,
-      CURLOPT_TIMEOUT => 3,
       CURLOPT_CUSTOMREQUEST => 'PUT',
       CURLOPT_HTTPHEADER => array('Content-Length: ' . strlen($data),
         'Accept: application/json'),
       CURLOPT_POSTFIELDS => $data,
       CURLOPT_SSL_VERIFYPEER => false,
-    );
+    ) + $this->curldefaults;
     if ($includeAuthCookie) {
       $ret[CURLOPT_COOKIE] = $this->GetCookieHeader();
     }
@@ -106,13 +105,10 @@ class RemoteAPI {
   // return the standard set of curl options for a DELETE
   private function GetCurlDeleteOptions( $url, $includeAuthCookie = false ) {
     $ret = array( CURLOPT_URL => $url,
-      CURLOPT_FAILONERROR => true,
-      CURLOPT_RETURNTRANSFER => true,
-      CURLOPT_TIMEOUT => 3,
       CURLOPT_HTTPHEADER => array('Accept: application/json'),
       CURLOPT_CUSTOMREQUEST => 'DELETE',
       CURLOPT_SSL_VERIFYPEER => false,
-    );
+    ) + $this->curldefaults;
     if ($includeAuthCookie) {
       $ret[CURLOPT_COOKIE] = $this->GetCookieHeader();
     }
@@ -250,6 +246,8 @@ class RemoteAPI {
     }
 
     $url = $this->endpoint_uri.'/user/logout';
+    // Get a CSRF Token for login to be able to login multiple times without logging out.
+    $this->CSRFToken = $this->GetCSRFToken();
 
     $ret = $this->CurlHttpRequest($callerId, $url, 'POST', NULL, true, true);
     if ($ret->info['http_code'] != 200) {

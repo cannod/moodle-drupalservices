@@ -100,7 +100,7 @@ if($config->cookiedomain) {
   // Connect to Drupal with this session
 
   if ($loggedin_user = $apiObj->Connect()) {
-    if ($ret->response->user->uid) {
+    if ($loggedin_user->user->uid) {
       $endpoint_reachable=true;
       $tests['session'] = array('success' => true, 'message' => "system/connect: User session data reachable and you are logged in!");
     } else {
@@ -139,6 +139,9 @@ if($config->cookiedomain && $endpoint_reachable) {
   $drupalssosettings->add(new admin_setting_configcheckbox('forcelogin',
     new lang_string('forcelogin', 'admin'),
     new lang_string('configforcelogin', 'admin'), 0));
+  $drupalssosettings->add(new admin_setting_configcheckbox('auth_drupalservices/call_logout_service',
+    new lang_string('auth_drupalservices_logout_drupal_key', 'auth_drupalservices'),
+    new lang_string('auth_drupalservices_logout_drupal', 'auth_drupalservices'), 1));
 
   //todo: these should be in a fieldset. a heading will do for now
   $drupalssosettings->add(new admin_setting_heading('drupalsso_userfieldmap', new lang_string('userfieldmap_header', 'auth_drupalservices'), new lang_string('userfieldmap_header_desc', 'auth_drupalservices')));

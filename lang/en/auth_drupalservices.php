@@ -45,3 +45,6 @@ $string['auth_drupalservicescantinsert'] = 'Moodle DB error. Cannot insert user:
 $string['auth_drupalservicescantupdate'] = 'Moodle DB error. Cannot update user: {$a}';
 $string['auth_drupalservicesuserstoupdate'] = 'User entries to update: {$a}';
 $string['auth_drupalservicesupdateuser'] ='Updated user {$a}';
+
+$string['auth_drupalservices_logout_drupal_key'] = 'Log out of Drupal when Moodle Logout happens';
+$string['auth_drupalservices_logout_drupal'] = "This should normally be checked. If your drupal site is using the masquerade or devel switch user modules, you will want to disable this to allow for easier switching between users.";
