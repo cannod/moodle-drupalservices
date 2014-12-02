@@ -70,8 +70,8 @@ class auth_plugin_drupalservices extends auth_plugin_base
     {
         global $CFG, $USER, $SESSION, $DB;
         // Check if we have a Drupal session.
-
-        if (empty($drupalsession = $this->get_drupal_session())) {
+        $drupalsession = $this->get_drupal_session();
+        if ($drupalsession !== null) {
             // redirect to drupal login page with destination
             if (isset($SESSION->wantsurl) and (strpos($SESSION->wantsurl, $CFG->wwwroot) == 0)) {
                 // the URL is set and within Moodle's environment
