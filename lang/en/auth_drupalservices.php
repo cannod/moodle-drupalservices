@@ -14,7 +14,7 @@ $string['servicesettings_header_info_firsttime']='This appears to be the first t
 
 $string['userfieldmap_header'] = 'User field mappings';
 $string['userfieldmap_header_desc'] = 'The user field mappings correlate Moodle user profile fields with Drupal user profile fields. Theses will be updated when users first log in to moodle, and each time the moodle session refreshes. Should bulk user importing be configured and enabled below, Moodle user profiles will also be updated on the next sync run after they are changed.';
-
+$string['fieldmap'] = 'Drupal value for {$a}';
 
 $string['userimport_header'] = 'User import/migration settings';
 $string['userimport_header_desc'] = 'These settings apply to bulk importing users from Drupal to Moodle via the sync_users.php script. A user account must be created in Drupal that has the "Moodle Services" role associated with it. That users credentials need to be supplied below. Each user imported will have profile values that use the field mappings set in the previous section.';
