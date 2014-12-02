@@ -92,7 +92,7 @@ if($remote_settings = $drupalserver->Settings()){
 }
 
 if($config->cookiedomain) {
-  $drupalsession=auth_plugin_drupalservices::get_drupal_session($config);
+  $drupalsession=$druaplauth->get_drupal_session($config);
 
 
   //now that the cookie domain is discovered, try to reach out to the endpoint to test SSO
@@ -117,9 +117,8 @@ if($config->cookiedomain) {
   $fulluser_keys=array_combine(array_keys($fulluser), array_keys($fulluser));
 }
 
-
-$drupalssosettings = new admin_settingpage('authsettingdrupalservices', new lang_string('pluginname', 'auth_drupalservices'),
-  array('auth/drupalservices:config'));
+//$settings comes from the calling page
+$drupalssosettings=&$settings;
 
 
 // build an endpoint status item here:
@@ -187,5 +186,5 @@ if($config->cookiedomain && $endpoint_reachable) {
     new lang_string('auth_drupalservices_cohort_view', 'auth_drupalservices'),
     $defaults->cohort_view, PARAM_TEXT));
 }
-$ADMIN->add('authsettings', $drupalssosettings);
+
 
