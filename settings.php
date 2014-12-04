@@ -76,7 +76,7 @@ $config = get_config('auth_drupalservices');
 //if the configuration has never been set, we want the autodetect script to activate
 $configempty=empty($config->host_uri);
 if(!$configempty){
-  debugging('Using preconfigured values: '.print_r($config), DEBUG_DEVELOPER);
+  debugging('Using preconfigured values: '.print_r($config, true), DEBUG_DEVELOPER);
 }
 
 // merge in the defaults
@@ -112,10 +112,13 @@ if($remote_settings = $drupalserver->Settings()){
     $config->cookiedomain=$remote_settings['settings']['cookiedomain'];
     set_config('cookiedomain', $config->host_uri, 'auth_drupalservices');
   }
+} else {
+  //TODO: This should get converted into a proper message.
+  debugging("The moodlesso service is unreachable. Please verify that you have the Mooodle SSO drupal module installed and enabled: http://drupal.org/project/moodle_sso ", DEBUG_DEVELOPER);
 }
 
 if($config->cookiedomain) {
-  $drupalsession=$drupalauth->get_drupal_session($config);
+  $drupalsession = $drupalauth->get_drupal_session($config);
 
 
   //now that the cookie domain is discovered, try to reach out to the endpoint to test SSO
@@ -123,21 +126,21 @@ if($config->cookiedomain) {
   // Connect to Drupal with this session
 
   if ($loggedin_user = $apiObj->Connect()) {
-    if ($loggedin_user->user->uid) {
+    if ($loggedin_user->user->uid !== false) {
+      debugging("<pre>Service were reached, here's the logged in user:".print_r($loggedin_user,true)."</pre>", DEBUG_DEVELOPER);
       $endpoint_reachable=true;
       $tests['session'] = array('success' => true, 'message' => "system/connect: User session data reachable and you are logged in!");
     } else {
       $tests['session'] = array('success' => false, 'message' => "system/connect: User session data reachable but you aren't logged in!");
     }
+    //this data should be cached - its possible that a non-admin user
+    $fulluser=(array)$apiObj->Index("user/".$loggedin_user->user->uid);
+
+    // turn the fulluser fields into key/value options
+    $fulluser_keys=array_combine(array_keys($fulluser), array_keys($fulluser));
   } else {
     $tests['session'] = array('success' => false, 'message' => "system/connect: User session data unreachable. Ensure that the server is reachable");
   }
-
-  //this data should be cached - its possible that a non-admin user
-  $fulluser=(array)$apiObj->Index("user/".$loggedin_user->user->uid);
-
-  // turn the fulluser fields into key/value options
-  $fulluser_keys=array_combine(array_keys($fulluser), array_keys($fulluser));
 }
 
 //$settings comes from the calling page
@@ -157,7 +160,7 @@ $drupalssosettings->add(new admin_setting_configtext('auth_drupalservices/host_u
   $defaults->host_uri, PARAM_TEXT));
 
 // don't allow configurations unless the endpoint is reachable
-if($config->cookiedomain && $endpoint_reachable) {
+if($config->cookiedomain !==false && $endpoint_reachable) {
   $drupalssosettings->add(new admin_setting_configcheckbox('forcelogin',
     new lang_string('forcelogin', 'admin'),
     new lang_string('configforcelogin', 'admin'), 0));

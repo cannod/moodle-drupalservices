@@ -175,13 +175,15 @@ class auth_plugin_drupalservices extends auth_plugin_base
         if($drupal_user->status) {
           //new or existing, these values need to be updated
           foreach ($this->userfields as $field) {
-            $drupalfield = $this->config->{"field_map_$field"};
-            if (!empty($drupalfield)) {
-              //there are several forms a user key can take in Drupal we've gotta check each one:
-              if (isset($drupal_user->{$drupalfield}->und[0]->value)) {
-                $user->$field = $drupal_user->{$drupalfield}->und[0]->value;
-              } elseif (!is_array($drupal_user->$drupalfield)) {
-                $user->$field = $drupal_user->$drupalfield;
+            if(isset($this->config->{"field_map_$field"})) {
+              $drupalfield = $this->config->{"field_map_$field"};
+              if (!empty($drupalfield)) {
+                //there are several forms a user key can take in Drupal we've gotta check each one:
+                if (isset($drupal_user->{$drupalfield}->und[0]->value)) {
+                  $user->$field = $drupal_user->{$drupalfield}->und[0]->value;
+                } elseif (!is_array($drupal_user->$drupalfield)) {
+                  $user->$field = $drupal_user->$drupalfield;
+                }
               }
             }
           }
@@ -534,9 +536,6 @@ class auth_plugin_drupalservices extends auth_plugin_base
       if(!$cfg) {
         $cfg = get_config('auth_drupalservices');
       }
-      if(!isset($cfg->host_uri)){
-        die(print_r(debug_backtrace()));
-      }
 
       // Otherwise use $base_url as session name, without the protocol
       // to use the same session identifiers across http and https.
@@ -546,7 +545,10 @@ class auth_plugin_drupalservices extends auth_plugin_base
       } else {
           $prefix = 'SESS';
       }
-      $session_name=$cfg->cookiedomain;
+
+      if(isset($cfg->cookiedomain)){
+        $session_name=$cfg->cookiedomain;
+      }
 
       $session_name = $prefix . substr(hash('sha256', $session_name), 0, 32);
 

@@ -66,10 +66,9 @@ class RemoteAPI {
 
     $url = $this->endpoint_uri . '/user/token';
     $response = $this->CurlHttpRequest('RemoteAPI->Token', $url, 'POST', "", true, true);
-    if(!$response->response){
-      print_r($response);
+    if($response->info['http_code'] <> 200){
+      return false;
     }
-    //print_r($response);
     return $response->response->token;
   }
   // *****************************************************************************
@@ -298,6 +297,9 @@ class RemoteAPI {
 
     if($debug){
       return (object)array('settings'=>$ret->response,'info'=>$ret->info);
+    }
+    if($ret->info['http_code'] <> 200){
+      return false;
     }
     return $ret->response;
   }
