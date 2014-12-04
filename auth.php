@@ -175,7 +175,8 @@ class auth_plugin_drupalservices extends auth_plugin_base
         if($drupal_user->status) {
           //new or existing, these values need to be updated
           foreach ($this->userfields as $field) {
-            if (!empty($drupalfield = $this->config->{"field_map_$field"})) {
+            $drupalfield = $this->config->{"field_map_$field"};
+            if (!empty($drupalfield)) {
               //there are several forms a user key can take in Drupal we've gotta check each one:
               if (isset($drupal_user->{$drupalfield}->und[0]->value)) {
                 $user->$field = $drupal_user->{$drupalfield}->und[0]->value;
@@ -386,125 +387,13 @@ class auth_plugin_drupalservices extends auth_plugin_base
         }
     }
     /**
-     * Function called by admin/auth.php to print a form for configuring plugin
-     *
-     * @param array $config      needed?
-     * @param array $err         needed?
-     * @param array $user_fields needed?
-     *
-     * @return int TRUE
-     */
-    // todo: remove this function after moving over the tests
-    function remove_config_form($config, $err, $user_fields){
-      global $CFG, $DB, $PAGE, $OUTPUT;
-
-        if($config->hostname){
-          $base_url = $config->endpoint_uri;
-          $drupalsession = $this->get_drupal_session($base_url);
-          $remote_user = $config->remote_user;
-          $remote_pw = $config->remote_pw;
-
-          //these tests were reordered to support configuration importing from the drupal sister module to this plugin.
-          //the first 3 tests verify that the moodle service user can connect in and pull information down
-          //the remainder of the tests verify SSO capability.
-
-          //test #1: authentication
-          $apiObj = new RemoteAPI($base_url);
-          // Required for authentication, and all other operations:
-          $ret = $apiObj->Login($remote_user, $remote_pw, true);
-
-          if($ret->info['http_code']==406){
-            $tests['auth']=array('success'=>false, 'message'=> "user/login: The drupal services endpoint is not accepting JSON requests. Please confirm that at least the JSON response formatter is checked, and at least the \"application/x-www-form-urlencoded\" request parsing header. (application/json is also recommended)");
-          }
-          if($ret->info['http_code']==404){
-            $tests['auth']=array('success'=>false, 'message'=> "user/login: Login service unreachable. Check that User/actions/login is enabled in the Drupal moodle services endpoint.");
-          }
-          elseif($ret->info['http_code']==401 && strpos($ret->error, 'Unauthorized: Missing required argument name')!==false){
-            $tests['auth']=array('success'=>false, 'message'=> "user/login: The User/Login endpoint resource needs to use the 1.0 API version.");
-          }
-          elseif($ret->info['http_code']==401){
-            $tests['auth']=array('success'=>false, 'message'=> "user/login: Login to drupal failed. Check that the username and password are correct.");
-          }
-          elseif($ret->info['http_code']==200){
-            $tests['auth']=array('success'=>true, 'message'=> "user/login: Logged in to drupal!");
-          }
-          else {
-            $tests['auth']=array('success'=>false, 'message'=> "user/login: Login to drupal failed with http code " . $ret->info['http_code']);
-            if (!empty($ret->error)) {
-              $tests['auth']['message'] .= PHP_EOL . $ret->error;
-            }
-          }
-
-          //test #2: user listings
-          // this test depends on at least one unblocked user existing
-          $drupal_users = $apiObj->Index('user', "?fields=uid,name,mail,status&page=1&pagesize=1&parameters[status]=1", true); //get a full listing, in debug mode
-          if($drupal_users==null){
-            $tests['userlisting']=array('success'=>false, 'message'=> "User/Index: An authentication error occurred");
-          }
-          elseif($drupal_users->info['http_code']==404){
-            $tests['userlisting']=array('success'=>false, 'message'=> "User/Index: The User/Index resource is not available in the drupal service endpoint.");
-          }
-          elseif($drupal_users->info['http_code']==403){
-            $tests['userlisting']=array('success'=>false, 'message'=> "User/Index: The user account specified does not have access to the User service. Check that the access permissions are correct");
-          }
-          elseif($drupal_users->info['http_code']==200 && !count($drupal_users->userlist)){
-            $tests['userlisting']=array('success'=>false, 'message'=> "User/Index: User listings are active, but no un-blocked users were found.");
-          }
-          elseif($drupal_users->info['http_code']==200 && count($drupal_users->userlist)){
-            $tests['userlisting']=array('success'=>true, 'message'=> "User/Index: User listings are active!");
-          }
-
-//test    //Test #3: can a full user be retrieved?
-          $specific_drupal_user=$apiObj->Index('user/'.$drupal_users->userlist[0]->uid);
-          if(!is_object($specific_drupal_user)){
-            $tests['userretrive']=array('success'=>false, 'message'=> "User/Retrieve: Active user profiles cannot be retrieved");
-          } elseif($specific_drupal_user->uid > 0){
-            $tests['userretrive']=array('success'=>true, 'message'=> "User/Retrieve: Active user profiles can be retrieved!");
-          }
-          //test #3: cookie found?
-          if($drupalsession){
-            $tests['cookie']=array('success'=>(bool)$drupalsession, 'message'=>"cookies: SSO Cookie discovered properly");
-          }
-          else{
-            $tests['cookie']=array('success'=>(bool)$drupalsession, 'message'=>"cookies: SSO Cookie not discovered. 1) check that you are currently logged in to drupal. 2) Check that Drupal's session cookie is configured in settings.php 3) check that cookie_domain is properly filled in.");
-          }
-
-          //test #4: service endpoints reachable?
-          $apiObj = new RemoteAPI($base_url, 1, $drupalsession);
-          // Connect to Drupal with this session
-          $ret = $apiObj->Connect(true);
-
-          if($ret){
-            if($ret->response->user->uid){
-              $tests['session']=array('success'=>true, 'message'=>"system/connect: User session data reachable and you are logged in!");
-            }
-            elseif($ret->info['http_code']==406){ // code for unsupported http request
-              $tests['session']=array('success'=>false, 'message'=>"system/connect: The drupal services endpoint is not accepting JSON requests. Please confirm that at least the JSON response formatter is checked, and at least the \"application/x-www-form-urlencoded\" request parsing header. (application/json is also recommended)");
-            }
-            else{
-              $tests['session']=array('success'=>false, 'message'=>"system/connect: User session data reachable but you aren't logged in!");
-            }
-
-          }
-          else{
-            $tests['session']=array('success'=>false, 'message'=> "system/connect: User session data unreachable. Ensure that the server is reachable, and that the 'session/connect' service is enable for this endpoint");
-          }
-
-        }
-        else{
-          $tests['configuration']=array('success'=>false, 'message'=> "no configuration data yet!");
-        }
-        $drupal_fields=array_keys((array)$specific_drupal_user);
-
-         //require('config.html');
-    }
-    /** 
      * Processes and stores configuration data for this authentication plugin.
      *
      * @param array $config main config 
      *
      * @return int TRUE
      */
+//todo: I'm pretty sure this doesn't get used without the config_form that is now also gone
     function process_config($config)
     {
       if ($data = data_submitted() and confirm_sesskey()) {
@@ -645,6 +534,10 @@ class auth_plugin_drupalservices extends auth_plugin_base
       if(!$cfg) {
         $cfg = get_config('auth_drupalservices');
       }
+      if(!isset($cfg->host_uri)){
+        die(print_r(debug_backtrace()));
+      }
+
       // Otherwise use $base_url as session name, without the protocol
       // to use the same session identifiers across http and https.
       list($protocol, $session_name) = explode('://', $cfg->host_uri, 2);
@@ -685,7 +578,10 @@ class auth_plugin_drupalservices extends auth_plugin_base
     if($webroot=parse_url($hostname)){
       //break up the hostname and path into name parts split up by the "." or "/" notation
       $domain=explode('.', $webroot['host']);
-      $path=explode('/', $webroot['path']);
+      if(!array_key_exists('path',$webroot)) {
+        $webroot['path'] = '';
+      }
+        $path = explode('/', $webroot['path']);
       // stripping out the last name part wouldn't make sense.
       // this will leave domains like "http://localhost" alone
       if (count($domain) > 1 && $usedomain){
@@ -732,26 +628,41 @@ class auth_plugin_drupalservices extends auth_plugin_base
 
   function detect_sso_settings($cookiebydomain){
     $testconfig=new stdClass();
-
+    $iloopbreak=0;
     do {
       $cookiebypath=$cookiebydomain;
       do{
+        $iloopbreak++;
         // generate a mock config where the base url and cookiedomain get modified
         $test=parse_url($cookiebypath);
+        // The path key should exist to prevent notices from showing up
+        if(!array_key_exists('path', $test)){
+          $test['path']='';
+        }
+        debugging(print_r($test,true), DEBUG_DEVELOPER);
         // Check to see if the cookie domain is set to use a wildcard for this domain
         // it is more likely that this will happen than the other one, so this check is first
         $testconfig->cookiedomain = "." . $test['host'] . $test['path'];
+        $testconfig->host_uri = $cookiebypath;
+        debugging('checking cookiedomain : '.$testconfig->cookiedomain, DEBUG_DEVELOPER);
         $sso_config_discovered = auth_plugin_drupalservices::get_drupal_session($testconfig);
         if(!$sso_config_discovered) {
           // check to see if the cookie is set to be this direct path (in the case of moodle/drupal in subdirectory mode)
           $testconfig->cookiedomain=$test['host'].$test['path'];
+          debugging('checking cookiedomain : '.$testconfig->cookiedomain, DEBUG_DEVELOPER);
           $sso_config_discovered=auth_plugin_drupalservices::get_drupal_session($testconfig);
         }
+        if($sso_config_discovered){
+          debugging('found cookies! on cookiedomain: '.$testconfig->cookiedomain, DEBUG_DEVELOPER);
+        }
         // loop again until there are no items left in the path part of the url
-      }while(!$sso_config_discovered && $cookiebypath=auth_plugin_drupalservices::dereference_url($cookiebypath, false));
+      }while($iloopbreak < 100 && !$sso_config_discovered && $cookiebypath=auth_plugin_drupalservices::dereference_url($cookiebypath, false));
 //loop again until there is only one item left in the domain part of the url
-    }while(!$sso_config_discovered && $cookiebydomain=auth_plugin_drupalservices::dereference_url($cookiebydomain, true));
+    }while($iloopbreak < 100 && !$sso_config_discovered && $cookiebydomain=auth_plugin_drupalservices::dereference_url($cookiebydomain, true));
 
+    if($iloopbreak >=100){
+      debugging('An infinite loop was detected and bypassed please report this!'.$testconfig->cookiedomain, DEBUG_NORMAL);
+    }
 // if the right cookie domain setting was discovered, set it to the proper config variable
 
     if($sso_config_discovered){
