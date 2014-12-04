@@ -23,7 +23,7 @@ require_once $CFG->libdir . '/authlib.php';
 require_once $CFG->dirroot . '/auth/drupalservices/auth.php';
 
 //this really shouldn't have to be reinstantiated
-$druaplauth= get_auth_plugin('drupalservices');
+$drupalauth= get_auth_plugin('drupalservices');
 
 //todo: this seemingly gets included 3 times when submitted - lets find out why
 // my guess is that its to run a validate/submit/load command set
@@ -72,8 +72,12 @@ $defaults=array(
 );
 
 $config = get_config('auth_drupalservices');
+
 //if the configuration has never been set, we want the autodetect script to activate
 $configempty=empty($config->host_uri);
+if(!$configempty){
+  debugging('Using preconfigured values: '.print_r($config), DEBUG_DEVELOPER);
+}
 
 // merge in the defaults
 $config=(array)$config + $defaults;
@@ -81,13 +85,13 @@ $config=(array)$config + $defaults;
 // the defaults give us enough to actually start the endpoint/sso configuration and tests
 
 if($configempty){
-  // autodetect sso settings
-  if($base_sso_settings=auth_plugin_drupalservices::detect_sso_settings($config['host_uri'])){
+  debugging('No previous configuration detected, attempting auto configuration', DEBUG_DEVELOPER);
+    // autodetect sso settings
+  if($base_sso_settings=$drupalauth->detect_sso_settings($config['host_uri'])){
     //merge in the resulting settings
     $config=$base_sso_settings + $config;
   }
 }
-
 // switch these over to objects now that all the merging is done
 $defaults=(object)$defaults;
 $config=(object)$config;
@@ -111,7 +115,7 @@ if($remote_settings = $drupalserver->Settings()){
 }
 
 if($config->cookiedomain) {
-  $drupalsession=$druaplauth->get_drupal_session($config);
+  $drupalsession=$drupalauth->get_drupal_session($config);
 
 
   //now that the cookie domain is discovered, try to reach out to the endpoint to test SSO
@@ -164,10 +168,10 @@ if($config->cookiedomain && $endpoint_reachable) {
   //todo: these should be in a fieldset. a heading will do for now
   $drupalssosettings->add(new admin_setting_heading('drupalsso_userfieldmap', new lang_string('userfieldmap_header', 'auth_drupalservices'), new lang_string('userfieldmap_header_desc', 'auth_drupalservices')));
 
-  foreach($druaplauth->userfields as $field){
+  foreach($drupalauth->userfields as $field){
     $drupalssosettings->add(new admin_setting_configselect('auth_drupalservices/field_map_'.$field,
       $field,
-      new lang_string('fieldmap', 'auth_drupalservices',array('field'=>$field)),
+      new lang_string('fieldmap', 'auth_drupalservices',array($field)),
       null,
       array(''=>"-- select --") + $fulluser_keys
       ));
