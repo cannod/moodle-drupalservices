@@ -174,7 +174,7 @@ if($config->cookiedomain !==false && $endpoint_reachable) {
   foreach($drupalauth->userfields as $field){
     $drupalssosettings->add(new admin_setting_configselect('auth_drupalservices/field_map_'.$field,
       $field,
-      new lang_string('fieldmap', 'auth_drupalservices',array($field)),
+      new lang_string('fieldmap', 'auth_drupalservices',$field),
       null,
       array(''=>"-- select --") + $fulluser_keys
       ));
