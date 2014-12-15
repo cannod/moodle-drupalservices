@@ -103,6 +103,7 @@ $endpoint_reachable=false;
 $drupalserver=new RemoteAPI($config->host_uri);
 // the settings service is public/public and just returns the cookiedomain and user field names (not data)
 if($remote_settings = $drupalserver->Settings()){
+  debugging("Received a cookie value from the remote server: ".print_r($remote_settings,true), DEBUG_DEVELOPER);
   $endpoint_reachable=true;
   //we connected and the service is actively responding
   set_config('host_uri', $config->host_uri, 'auth_drupalservices');
@@ -139,6 +140,7 @@ if($config->cookiedomain) {
     // turn the fulluser fields into key/value options
     $fulluser_keys=array_combine(array_keys($fulluser), array_keys($fulluser));
   } else {
+    debugging("could not reach the logged in user ".print_r($loggedin_user,true),DEBUG_DEVELOPER);
     $tests['session'] = array('success' => false, 'message' => "system/connect: User session data unreachable. Ensure that the server is reachable");
   }
 }
