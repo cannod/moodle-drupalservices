@@ -176,7 +176,7 @@ if($config->cookiedomain !==false && $endpoint_reachable) {
       $field,
       new lang_string('fieldmap', 'auth_drupalservices',$field),
       null,
-      array(''=>"-- select --") + $fulluser_keys
+      array(''=>"-- select --") + (array)$fulluser_keys
       ));
   }
 
