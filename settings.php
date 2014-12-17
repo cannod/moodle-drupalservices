@@ -91,6 +91,7 @@ if($configempty){
     //merge in the resulting settings
     $config=$base_sso_settings + $config;
   }
+  debugging("using the following settings initially: ".print_r($config,true));
 }
 // switch these over to objects now that all the merging is done
 $defaults=(object)$defaults;
