@@ -669,11 +669,13 @@ class auth_plugin_drupalservices extends auth_plugin_base
         $session_name=$cfg->cookiedomain;
 
         $session_name = $prefix . substr(hash('sha256', $session_name), 0, 32);
+
         if (isset($_COOKIE[$session_name])) {
             $session_id = $_COOKIE[$session_name];
             $return = array('session_name' => $session_name, 'session_id' => $session_id,);
             return $return;
         } else {
+          debugging("Failed to find a session. the hash values used were {$prefix} and {$cfg->cookiedomain} equaling {$session_name}");
             return null;
         }
     }

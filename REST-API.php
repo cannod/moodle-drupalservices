@@ -62,6 +62,7 @@ class RemoteAPI {
                   CURLOPT_POST => true,
                   CURLOPT_POSTFIELDS => $data,
                   CURLOPT_SSL_VERIFYPEER => false,
+                  CURLOPT_FOLLOWLOCATION => true,
                   // CURLOPT_VERBOSE => true,
                 );
     if ($includeAuthCookie) {
@@ -84,6 +85,7 @@ class RemoteAPI {
                   CURLOPT_TIMEOUT => 3,
                   CURLOPT_HTTPHEADER => array('Accept: application/json'),
                   CURLOPT_SSL_VERIFYPEER => false,
+                  CURLOPT_FOLLOWLOCATION => true,
                 );
     if ($includeAuthCookie) {
       $ret[CURLOPT_COOKIE] = $this->GetCookieHeader();
