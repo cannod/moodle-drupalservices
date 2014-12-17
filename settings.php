@@ -74,7 +74,7 @@ $defaults=array(
 $config = get_config('auth_drupalservices');
 
 //if the configuration has never been set, we want the autodetect script to activate
-$configempty=empty($config->host_uri);
+$configempty = empty($config->host_uri);
 if(!$configempty){
   debugging('Using preconfigured values: '.print_r($config, true), DEBUG_DEVELOPER);
 }
@@ -87,7 +87,7 @@ $config=(array)$config + $defaults;
 if($configempty){
   debugging('No previous configuration detected, attempting auto configuration', DEBUG_DEVELOPER);
     // autodetect sso settings
-  if($base_sso_settings=$drupalauth->detect_sso_settings($config['host_uri'])){
+  if($base_sso_settings = $drupalauth->detect_sso_settings($config['host_uri'])){
     //merge in the resulting settings
     $config=$base_sso_settings + $config;
   }
@@ -104,11 +104,12 @@ $endpoint_reachable=false;
 $drupalserver=new RemoteAPI($config->host_uri);
 // the settings service is public/public and just returns the cookiedomain and user field names (not data)
 if($remote_settings = $drupalserver->Settings()){
+  debugging('Reached out for the cookie form the server and got: '.print_r($remote_settings,true));
   $endpoint_reachable=true;
   //we connected and the service is actively responding
   set_config('host_uri', $config->host_uri, 'auth_drupalservices');
   //if the cookie domain hasn't been previously set, set it now
-  if(!$config->cookiedomain && $configempty){
+  if($config->cookiedomain == '' && $configempty){
     // the cookiedomain should get received via the Settings call
     $config->cookiedomain=$remote_settings['settings']['cookiedomain'];
     set_config('cookiedomain', $config->host_uri, 'auth_drupalservices');
