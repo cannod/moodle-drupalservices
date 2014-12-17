@@ -567,6 +567,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
         // save settings
         set_config('hostname', $config->hostname, 'auth_drupalservices');
         set_config('cookiedomain', $config->cookiedomain, 'auth_drupalservices');
+        set_config('usehttpcookie', $config->usehttpcookie, 'auth_drupalservices');
         set_config('endpoint', $config->endpoint, 'auth_drupalservices');
         set_config('remote_user', $config->remote_user, 'auth_drupalservices');
         set_config('remote_pw', $config->remote_pw, 'auth_drupalservices');
@@ -661,7 +662,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
         // Otherwise use $base_url as session name, without the protocol
         // to use the same session identifiers across http and https.
         list($protocol, $session_name) = explode('://', $base_url, 2);
-        if (strtolower($protocol) == 'https') {
+        if (strtolower($protocol) == 'https' && $cfg->usehttpcookie <> true) {
             $prefix = 'SSESS';
         } else {
             $prefix = 'SESS';
