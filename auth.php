@@ -668,7 +668,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
 // if the right cookie domain setting was discovered, set it to the proper config variable
 
     if($sso_config_discovered){
-      $config['host_uri']=$cookiebydomain;
+      $config['host_uri']=$cookiebypath;
       $config['cookiedomain']=$testconfig->cookiedomain;
       return $config;
     }
