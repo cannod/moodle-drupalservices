@@ -43,7 +43,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
     function auth_plugin_drupalservices()
     {
         $this->authtype = 'drupalservices';
-        $this->config = get_config('auth/drupalservices');
+        $this->config = get_config('auth_drupalservices');
     }
     /** 
      * This plugin is for SSO only; Drupal handles the login
@@ -565,15 +565,15 @@ class auth_plugin_drupalservices extends auth_plugin_base
         // NOT WORKING!
         $config->field_lock_idnumber = 'locked';
         // save settings
-        set_config('hostname', $config->hostname, 'auth/drupalservices');
-        set_config('cookiedomain', $config->cookiedomain, 'auth/drupalservices');
-        set_config('endpoint', $config->endpoint, 'auth/drupalservices');
-        set_config('remote_user', $config->remote_user, 'auth/drupalservices');
-        set_config('remote_pw', $config->remote_pw, 'auth/drupalservices');
-        set_config('cohorts', $config->cohorts, 'auth/drupalservices');
-        set_config('cohort_view', $config->cohort_view, 'auth/drupalservices');
-        set_config('removeuser', $config->removeuser, 'auth/drupalservices');
-        set_config('field_lock_idnumber', $config->field_lock_idnumber, 'auth/drupalservices');
+        set_config('hostname', $config->hostname, 'auth_drupalservices');
+        set_config('cookiedomain', $config->cookiedomain, 'auth_drupalservices');
+        set_config('endpoint', $config->endpoint, 'auth_drupalservices');
+        set_config('remote_user', $config->remote_user, 'auth_drupalservices');
+        set_config('remote_pw', $config->remote_pw, 'auth_drupalservices');
+        set_config('cohorts', $config->cohorts, 'auth_drupalservices');
+        set_config('cohort_view', $config->cohort_view, 'auth_drupalservices');
+        set_config('removeuser', $config->removeuser, 'auth_drupalservices');
+        set_config('field_lock_idnumber', $config->field_lock_idnumber, 'auth_drupalservices');
         return true;
     }
     /**
@@ -657,7 +657,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
      */ 
     function get_drupal_session($base_url)
     {
-        $cfg=get_config('auth/drupalservices');
+        $cfg=get_config('auth_drupalservices');
         // Otherwise use $base_url as session name, without the protocol
         // to use the same session identifiers across http and https.
         list($protocol, $session_name) = explode('://', $base_url, 2);
