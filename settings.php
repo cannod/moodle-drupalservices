@@ -118,6 +118,8 @@ if($remote_settings = $drupalserver->Settings()){
   debugging("The moodlesso service is unreachable. Please verify that you have the Mooodle SSO drupal module installed and enabled: http://drupal.org/project/moodle_sso ", DEBUG_DEVELOPER);
 }
 
+$fulluser_keys = array();
+
 if($config->cookiedomain) {
   $drupalsession = $drupalauth->get_drupal_session($config);
 
