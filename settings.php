@@ -111,8 +111,10 @@ if($remote_settings = $drupalserver->Settings()){
   //if the cookie domain hasn't been previously set, set it now
   if($config->cookiedomain == '' && $configempty){
     // the cookiedomain should get received via the Settings call
-    $config->cookiedomain=$remote_settings['settings']['cookiedomain'];
-    set_config('cookiedomain', $config->host_uri, 'auth_drupalservices');
+    $config->cookiedomain=$remote_settings->cookiedomain;
+  }
+  if($configempty) {
+    set_config('cookiedomain', $config->cookiedomain, 'auth_drupalservices');
   }
 } else {
   //TODO: This should get converted into a proper message.
