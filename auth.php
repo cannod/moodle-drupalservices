@@ -432,11 +432,22 @@ class auth_plugin_drupalservices extends auth_plugin_base
      */
     function config_form($config, $err, $user_fields)
     {
+        global $CFG;
         if($config->hostname){
           $base_url = $config->hostname;
           $drupalsession = $this->get_drupal_session($base_url);
           $remote_user = $config->remote_user;
           $remote_pw = $config->remote_pw;
+
+          //test #0: do the protocols match?
+          $hostinfo=parse_url($config->hostname);
+
+          if(!strstr($CFG->wwwroot, $hostinfo['scheme'] . ":")){
+            $tests['protocols']=array('success'=>false, 'message'=>"Protocol: Moodle and drupal must both run under the same http protocol. They are currently mis-matched");
+          }
+          else{
+            $tests['protocols']=array('success'=>true, 'message'=>"Protocol: Both Moodle and Drupal are being accessed on the same protocol!");
+          }
 
           //test #1: cookie found?
           if($drupalsession){
@@ -445,7 +456,6 @@ class auth_plugin_drupalservices extends auth_plugin_base
           else{
             $tests['cookie']=array('success'=>(bool)$drupalsession, 'message'=>"cookies: SSO Cookie not discovered. 1) check that you are currently logged in to drupal. 2) Check that Drupal's session cookie is configured in settings.php 3) check that cookie_domain is properly filled in.");
           }
-
           //test #2: service endpoints reachable?
           $endpoint = $config->endpoint;
 
@@ -453,7 +463,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
           // Connect to Drupal with this session
           $ret = $apiObj->Connect(true);
 
-          if($ret){
+          if($ret->response){
             if($ret->response->user->uid){
               $tests['session']=array('success'=>true, 'message'=>"system/connect: User session data reachable and you are logged in!");
             }
@@ -662,7 +672,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
         // Otherwise use $base_url as session name, without the protocol
         // to use the same session identifiers across http and https.
         list($protocol, $session_name) = explode('://', $base_url, 2);
-        if (strtolower($protocol) == 'https' && $cfg->usehttpcookie <> true) {
+        if (strtolower($protocol) == 'https') {
             $prefix = 'SSESS';
         } else {
             $prefix = 'SESS';

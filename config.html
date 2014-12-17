@@ -70,13 +70,6 @@
     </td>
     <td><?php print_string("auth_drupalservicescookiedomain", "auth_drupalservices") ?></td>
 </tr>
-<tr valign="top">
-    <td align="right"><label for="usehttpcookie"><?php print_string("auth_drupalservices_usehttpcookie", "auth_drupalservices") ?></label></td>
-    <td>
-        <?php echo html_writer::select($yesno, 'usehttpcookie', $config->usehttpcookie, false); ?>
-    </td>
-    <td><?php print_string("auth_drupalservices_usehttpcookie", "auth_drupalservices") ?></td>
-</tr>
 
 <tr valign="top" class="required">
     <td align="right"><label for="endpoint"><?php print_string("auth_drupalservicesendpoint_key", "auth_drupalservices") ?></label></td>

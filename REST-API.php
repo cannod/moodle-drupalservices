@@ -235,11 +235,13 @@ class RemoteAPI {
     $this->CSRFToken = $this->GetCSRFToken();
     $ret = $this->CurlHttpRequest($callerId, $url, 'POST', $data, false, true);
     if ($ret->info['http_code'] == 200) { //success!
-      $this->sessid  = $ret->response->sessid;
-      $this->session = $ret->response->session_name;
-      $this->status = RemoteAPI::RemoteAPI_status_loggedin;
-      // Update the CSRF Token after successful login
-      $this->CSRFToken = $this->GetCSRFToken();
+      if($ret->response) {
+        $this->sessid = $ret->response->sessid;
+        $this->session = $ret->response->session_name;
+        $this->status = RemoteAPI::RemoteAPI_status_loggedin;
+        // Update the CSRF Token after successful login
+        $this->CSRFToken = $this->GetCSRFToken();
+      }
     }
 
     if($debug){
