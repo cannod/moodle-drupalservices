@@ -141,6 +141,7 @@ if($config->cookiedomain) {
     }
     //this data should be cached - its possible that a non-admin user
     $fulluser=(array)$apiObj->Index("user/".$loggedin_user->user->uid);
+    debugging("<pre>here's the complete user:".print_r($fulluser,true)."</pre>", DEBUG_DEVELOPER);
 
     // turn the fulluser fields into key/value options
     $fulluser_keys=array_combine(array_keys($fulluser), array_keys($fulluser));
