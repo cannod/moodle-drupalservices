@@ -539,7 +539,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
     {
       if(!$cfg) {
         $cfg = get_config('auth_drupalservices');
-        debugging("<pre>loaded saved session settings config:".print_r(array($cfg->host_uri, $cfg->cookie_domain),true)."</pre>", DEBUG_DEVELOPER);
+        debugging("<pre>loaded saved session settings config:".print_r(array('host'=>$cfg->host_uri, 'cookie domain'=>$cfg->cookie_domain),true)."</pre>", DEBUG_DEVELOPER);
       }
 
       // Otherwise use $base_url as session name, without the protocol
