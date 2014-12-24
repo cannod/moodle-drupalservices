@@ -539,7 +539,13 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
     {
       if(!$cfg) {
         $cfg = get_config('auth_drupalservices');
-        debugging("<pre>loaded saved session settings config:".print_r(array('host'=>$cfg->host_uri, 'cookie domain'=>$cfg->cookie_domain),true)."</pre>", DEBUG_DEVELOPER);
+        if(!$cfg->cookiedomain){
+          //something went really wrong, try and re detect the session cookie and save it
+          $settings=$this->detect_sso_settings($cfg->host_uri);
+          set_config('cookie_domain',$settings['cookiedomain'],'auth_drupalservices');
+          $cfg->cookie_domain=$settings['cookiedomain'];
+        }
+        debugging("<pre>loaded saved session settings config:".print_r(array('host'=>$cfg->host_uri, 'cookie domain'=>$cfg->cookiedomain),true)."</pre>", DEBUG_DEVELOPER);
       }
 
       // Otherwise use $base_url as session name, without the protocol
