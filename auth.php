@@ -72,6 +72,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
         // Check if we have a Drupal session.
         $drupalsession = $this->get_drupal_session();
         if ($drupalsession == null) {
+          debugging("No drupal session detected, sending to drupal for login.", DEBUG_DEVELOPER);
             // redirect to drupal login page with destination
             if (isset($SESSION->wantsurl) and (strpos($SESSION->wantsurl, $CFG->wwwroot) == 0)) {
                 // the URL is set and within Moodle's environment
@@ -105,6 +106,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
             }
             return;
         }
+        debugging("<pre>Live session detected the user returned is\r\n".print_r($ret,true)."</pre>", DEBUG_DEVELOPER);
         $uid = $ret->user->uid;
         if ($uid < 1) { //No anon
             return;
@@ -115,10 +117,12 @@ class auth_plugin_drupalservices extends auth_plugin_base
         }
 
         $drupaluser = $apiObj->Index("user/{$uid}");
+        debugging("<pre>The full user data about this user is:\r\n".print_r($drupaluser,true)."</pre>",DEBUG_DEVELOPER);
         //create/update looks up the user and writes updated information to the DB
         $this->create_update_user($drupaluser);
-        $user = get_complete_user_data('idnumber', $uid);
 
+        $user = get_complete_user_data('idnumber', $uid);
+debugging("<pre>the user that should have been created or updated is:\r\n".print_r($user,true)."</pre>",DEBUG_DEVELOPER);
         // Complete the login
         complete_user_login($user);
         // redirect
