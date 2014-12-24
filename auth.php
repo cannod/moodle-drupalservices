@@ -543,7 +543,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
           //something went really wrong, try and re detect the session cookie and save it
           $settings=$this->detect_sso_settings($cfg->host_uri);
           set_config('cookiedomain',$settings['cookiedomain'],'auth_drupalservices');
-          $cfg->cookie_domain=$settings['cookiedomain'];
+          $cfg->cookiedomain=$settings['cookiedomain'];
         }
         debugging("<pre>loaded saved session settings config:".print_r(array('host'=>$cfg->host_uri, 'cookie domain'=>$cfg->cookiedomain),true)."</pre>", DEBUG_DEVELOPER);
       }
