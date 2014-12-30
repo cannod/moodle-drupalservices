@@ -175,6 +175,10 @@ if($config->cookiedomain !==false && $endpoint_reachable) {
     new lang_string('auth_drupalservices_logout_drupal_key', 'auth_drupalservices'),
     new lang_string('auth_drupalservices_logout_drupal', 'auth_drupalservices'), 1));
 
+  $drupalssosettings->add(new admin_setting_configcheckbox('auth_drupalservices/use_special_goto',
+    new lang_string('auth_drupalservices_use_special_goto_key', 'auth_drupalservices'),
+    new lang_string('auth_drupalservices_use_special_goto', 'auth_drupalservices'), 0));
+
   //todo: these should be in a fieldset. a heading will do for now
   $drupalssosettings->add(new admin_setting_heading('drupalsso_userfieldmap', new lang_string('userfieldmap_header', 'auth_drupalservices'), new lang_string('userfieldmap_header_desc', 'auth_drupalservices')));
 

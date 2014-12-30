@@ -67,3 +67,6 @@ $string['auth_drupalservicesupdateuser'] ='Updated user {$a}';
 
 $string['auth_drupalservices_logout_drupal_key'] = 'Log out of Drupal when Moodle Logout happens';
 $string['auth_drupalservices_logout_drupal'] = "This should normally be checked. If your drupal site is using the masquerade or devel switch user modules, you will want to disable this to allow for easier switching between users.";
+
+$string['auth_drupalservices_use_special_goto_key'] = 'Use "moodle_destination=" instead of "destination=" for login redirecting';
+$string['auth_drupalservices_use_special_goto'] = "The latest version of the moodle_sso drupal plugin supports using a custom variable to handle login redirects. If you are having trouble with login redirects, and are using the most recent version of that drupal module, check this box.";
