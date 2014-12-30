@@ -74,7 +74,7 @@ $defaults=array(
 $config = get_config('auth_drupalservices');
 
 //if the configuration has never been set, we want the autodetect script to activate
-$configempty=empty($config->host_uri);
+$configempty = empty($config->host_uri);
 if(!$configempty){
   debugging('Using preconfigured values: '.print_r($config, true), DEBUG_DEVELOPER);
 }
@@ -87,10 +87,11 @@ $config=(array)$config + $defaults;
 if($configempty){
   debugging('No previous configuration detected, attempting auto configuration', DEBUG_DEVELOPER);
     // autodetect sso settings
-  if($base_sso_settings=$drupalauth->detect_sso_settings($config['host_uri'])){
+  if($base_sso_settings = $drupalauth->detect_sso_settings($config['host_uri'])){
     //merge in the resulting settings
     $config=$base_sso_settings + $config;
   }
+  debugging("using the following settings initially: ".print_r($config,true));
 }
 // switch these over to objects now that all the merging is done
 $defaults=(object)$defaults;
@@ -108,15 +109,19 @@ if($remote_settings = $drupalserver->Settings()){
   //we connected and the service is actively responding
   set_config('host_uri', $config->host_uri, 'auth_drupalservices');
   //if the cookie domain hasn't been previously set, set it now
-  if(!$config->cookiedomain && $configempty){
+  if($config->cookiedomain == '' && $configempty){
     // the cookiedomain should get received via the Settings call
-    $config->cookiedomain=$remote_settings['settings']['cookiedomain'];
-    set_config('cookiedomain', $config->host_uri, 'auth_drupalservices');
+    $config->cookiedomain=$remote_settings->cookiedomain;
+  }
+  if($configempty) {
+    set_config('cookiedomain', $config->cookiedomain, 'auth_drupalservices');
   }
 } else {
   //TODO: This should get converted into a proper message.
   debugging("The moodlesso service is unreachable. Please verify that you have the Mooodle SSO drupal module installed and enabled: http://drupal.org/project/moodle_sso ", DEBUG_DEVELOPER);
 }
+
+$fulluser_keys = array();
 
 if($config->cookiedomain) {
   $drupalsession = $drupalauth->get_drupal_session($config);
@@ -136,6 +141,7 @@ if($config->cookiedomain) {
     }
     //this data should be cached - its possible that a non-admin user
     $fulluser=(array)$apiObj->Index("user/".$loggedin_user->user->uid);
+    debugging("<pre>here's the complete user:".print_r($fulluser,true)."</pre>", DEBUG_DEVELOPER);
 
     // turn the fulluser fields into key/value options
     $fulluser_keys=array_combine(array_keys($fulluser), array_keys($fulluser));
@@ -178,7 +184,7 @@ if($config->cookiedomain !==false && $endpoint_reachable) {
       $field,
       new lang_string('fieldmap', 'auth_drupalservices',$field),
       null,
-      array(''=>"-- select --") + $fulluser_keys
+      array(''=>"-- select --") + (array)$fulluser_keys
       ));
   }
 

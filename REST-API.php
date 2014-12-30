@@ -180,7 +180,7 @@ class RemoteAPI {
 
     // I had to do this as my hosting provider had dns cache issues. 
     $ip = gethostbyname(parse_url($url,  PHP_URL_HOST));
-
+    debugging("attempting to reach service url: ".$url, DEBUG_DEVELOPER);
     $ret = new stdClass;
     $ret->response = curl_exec($ch); // execute and get response
     $ret->error    = curl_error($ch);

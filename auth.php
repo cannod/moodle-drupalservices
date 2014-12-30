@@ -72,6 +72,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
         // Check if we have a Drupal session.
         $drupalsession = $this->get_drupal_session();
         if ($drupalsession == null) {
+          debugging("No drupal session detected, sending to drupal for login.", DEBUG_DEVELOPER);
             // redirect to drupal login page with destination
             if (isset($SESSION->wantsurl) and (strpos($SESSION->wantsurl, $CFG->wwwroot) == 0)) {
                 // the URL is set and within Moodle's environment
@@ -105,6 +106,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
             }
             return;
         }
+        debugging("<pre>Live session detected the user returned is\r\n".print_r($ret,true)."</pre>", DEBUG_DEVELOPER);
         $uid = $ret->user->uid;
         if ($uid < 1) { //No anon
             return;
@@ -115,10 +117,12 @@ class auth_plugin_drupalservices extends auth_plugin_base
         }
 
         $drupaluser = $apiObj->Index("user/{$uid}");
+        debugging("<pre>The full user data about this user is:\r\n".print_r($drupaluser,true)."</pre>",DEBUG_DEVELOPER);
         //create/update looks up the user and writes updated information to the DB
         $this->create_update_user($drupaluser);
-        $user = get_complete_user_data('idnumber', $uid);
 
+        $user = get_complete_user_data('idnumber', $uid);
+debugging("<pre>the user that should have been created or updated is:\r\n".print_r($user,true)."</pre>",DEBUG_DEVELOPER);
         // Complete the login
         complete_user_login($user);
         // redirect
@@ -535,6 +539,13 @@ class auth_plugin_drupalservices extends auth_plugin_base
     {
       if(!$cfg) {
         $cfg = get_config('auth_drupalservices');
+        if(!$cfg->cookiedomain){
+          //something went really wrong, try and re detect the session cookie and save it
+          $settings=$this->detect_sso_settings($cfg->host_uri);
+          set_config('cookiedomain',$settings['cookiedomain'],'auth_drupalservices');
+          $cfg->cookiedomain=$settings['cookiedomain'];
+        }
+        debugging("<pre>loaded saved session settings config:".print_r(array('host'=>$cfg->host_uri, 'cookie domain'=>$cfg->cookiedomain),true)."</pre>", DEBUG_DEVELOPER);
       }
 
       // Otherwise use $base_url as session name, without the protocol
@@ -668,7 +679,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
 // if the right cookie domain setting was discovered, set it to the proper config variable
 
     if($sso_config_discovered){
-      $config['host_uri']=$cookiebydomain;
+      $config['host_uri']=$cookiebypath;
       $config['cookiedomain']=$testconfig->cookiedomain;
       return $config;
     }
