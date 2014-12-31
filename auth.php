@@ -88,7 +88,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
                 if($this->config->use_special_goto){
                   $special = "moodle_";
                 }
-                redirect($this->config->host_uri . "/user/login?{$special}destination=" . $path . $args);
+                redirect($this->config->host_uri . "/user/login?moodle_url=true&destination=" . $path . $args);
             }
             return; // just send user to login page
             
