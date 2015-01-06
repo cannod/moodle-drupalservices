@@ -316,7 +316,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
         if ($this->config->cohorts != 0) {
             $cohort_view = $this->config->cohort_view;
             print "Updating cohorts using services view - $cohort_view\n";
-            $context = get_context_instance(CONTEXT_SYSTEM);
+            $context = context_system::instance();
             //$processed_cohorts_list = array();
             $drupal_cohorts = $apiObj->Index($cohort_view);
             if (is_null($drupal_cohorts)) {
