@@ -621,26 +621,31 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
 
   /**
    * @param $cookiebydomain
-   detecting the sso cookie is the hard part because we need to check all of the valid subdomains against
-   all of the subdirectories till a match is found. Here's an example and how it will be scanned:
-
-   example full path: http://moodle.intranet.example.com/example/drupal/drupalsso
-
-   moodle.intranet.example.com/example/drupal/drupalsso
-   moodle.intranet.example.com/example/drupal
-   moodle.intranet.example.com/example
-   .intranet.example.com/example/drupal/drupalsso
-   .intranet.example.com/example/drupal
-   .intranet.example.com/example
-   .intranet.example.com
-   .example.com/example/drupal/drupalsso
-   .example.com/example/drupal
-   .example.com/example
-   .example.com
-
-   if/when a match is found the proper settings will be saved and used. if not, a message will be displayed
-
-   use a do/while because each of the loops need to run at least one time.
+   * detecting the sso cookie is the hard part because we need to check all of the valid subdomains against
+   * all of the subdirectories till a match is found. Here's an example and how it will be scanned:
+   *
+   * example full path: http://moodle.intranet.example.com/example/drupal/drupalsso
+   *
+   * moodle.intranet.example.com/example/drupal/drupalsso
+   *  moodle.intranet.example.com/example/drupal
+   *  moodle.intranet.example.com/example
+   *  .intranet.example.com/example/drupal/drupalsso
+   *  .intranet.example.com/example/drupal
+   *  .intranet.example.com/example
+   *  .intranet.example.com
+   *  .example.com/example/drupal/drupalsso
+   *  .example.com/example/drupal
+   *  .example.com/example
+   *  .example.com
+   *
+   * if/when a match is found the proper settings will be saved and used. if not, a message will be displayed
+   *
+   * use a do/while because each of the loops need to run at least one time.
+   *
+   * this needs to also be able to detect a path/domain disparity such as:
+   * path:    example.com/drupal
+   * cookie:  .example.com
+   *
 */
 
   function detect_sso_settings($cookiebydomain){
