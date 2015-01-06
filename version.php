@@ -20,7 +20,7 @@
  */
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2014111400; // The current plugin version (Date: YYYYMMDDXX)
+$plugin->version = 2014123000; // The current plugin version (Date: YYYYMMDDXX)
 $plugin->requires = 2013110500; // Requires this Moodle version
 $plugin->component = 'auth_drupalservices'; // Full name of the plugin (used for diagnostics)
 $plugin->maturity = MATURITY_BETA;
