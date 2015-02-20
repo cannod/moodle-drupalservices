@@ -230,7 +230,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
         global $CFG, $SESSION;
         $base_url = $this->config->host_uri;
         if ($drupalsession=$this->get_drupal_session() ) {
-          if (get_config('call_logout_service', 'auth_drupalservices')) {
+          if (get_config('auth_drupalservices', 'call_logout_service')) {
             // logout of drupal.
             $apiObj = new RemoteAPI($base_url, 1, $drupalsession);
             $ret = $apiObj->Logout();
@@ -383,7 +383,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
             }
         } // End of cohorts
         //LOGOUT
-        if(get_config('call_logout_service', 'auth_drupalservices')) {
+        if(get_config('auth_drupalservices', 'call_logout_service')) {
           $ret = $apiObj->Logout();
           if (is_null($ret)) {
             print "ERROR logging out!\n";
