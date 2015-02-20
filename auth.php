@@ -84,10 +84,6 @@ class auth_plugin_drupalservices extends auth_plugin_base
                     $args = '?' . $args;
                 }
                 // FIX so not hard coded.
-                $special="";
-                if($this->config->use_special_goto){
-                  $special = "moodle_";
-                }
                 redirect($this->config->host_uri . "/user/login?moodle_url=true&destination=" . $path . $args);
             }
             return; // just send user to login page
@@ -234,7 +230,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
         global $CFG, $SESSION;
         $base_url = $this->config->host_uri;
         if ($drupalsession=$this->get_drupal_session() ) {
-          if (get_config('call_logout_service', 'auth_drupalservices')) {
+          if (get_config('auth_drupalservices', 'call_logout_service')) {
             // logout of drupal.
             $apiObj = new RemoteAPI($base_url, 1, $drupalsession);
             $ret = $apiObj->Logout();
@@ -387,7 +383,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
             }
         } // End of cohorts
         //LOGOUT
-        if(get_config('call_logout_service', 'auth_drupalservices')) {
+        if(get_config('auth_drupalservices', 'call_logout_service')) {
           $ret = $apiObj->Logout();
           if (is_null($ret)) {
             print "ERROR logging out!\n";
@@ -621,26 +617,31 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
 
   /**
    * @param $cookiebydomain
-   detecting the sso cookie is the hard part because we need to check all of the valid subdomains against
-   all of the subdirectories till a match is found. Here's an example and how it will be scanned:
-
-   example full path: http://moodle.intranet.example.com/example/drupal/drupalsso
-
-   moodle.intranet.example.com/example/drupal/drupalsso
-   moodle.intranet.example.com/example/drupal
-   moodle.intranet.example.com/example
-   .intranet.example.com/example/drupal/drupalsso
-   .intranet.example.com/example/drupal
-   .intranet.example.com/example
-   .intranet.example.com
-   .example.com/example/drupal/drupalsso
-   .example.com/example/drupal
-   .example.com/example
-   .example.com
-
-   if/when a match is found the proper settings will be saved and used. if not, a message will be displayed
-
-   use a do/while because each of the loops need to run at least one time.
+   * detecting the sso cookie is the hard part because we need to check all of the valid subdomains against
+   * all of the subdirectories till a match is found. Here's an example and how it will be scanned:
+   *
+   * example full path: http://moodle.intranet.example.com/example/drupal/drupalsso
+   *
+   * moodle.intranet.example.com/example/drupal/drupalsso
+   *  moodle.intranet.example.com/example/drupal
+   *  moodle.intranet.example.com/example
+   *  .intranet.example.com/example/drupal/drupalsso
+   *  .intranet.example.com/example/drupal
+   *  .intranet.example.com/example
+   *  .intranet.example.com
+   *  .example.com/example/drupal/drupalsso
+   *  .example.com/example/drupal
+   *  .example.com/example
+   *  .example.com
+   *
+   * if/when a match is found the proper settings will be saved and used. if not, a message will be displayed
+   *
+   * use a do/while because each of the loops need to run at least one time.
+   *
+   * this needs to also be able to detect a path/domain disparity such as:
+   * path:    example.com/drupal
+   * cookie:  .example.com
+   *
 */
 
   function detect_sso_settings($cookiebydomain){
