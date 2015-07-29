@@ -188,6 +188,8 @@ class RemoteAPI {
     curl_close($ch);
 
     if ($ret->info['http_code'] == 200) {
+      // Strip unicode BOM characters from the response before JSON decoding
+      $ret->response = preg_replace("/^.*?\{/u","{", $ret->response);
       $ret->response = json_decode($ret->response);
     }
 
