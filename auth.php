@@ -96,8 +96,9 @@ class auth_plugin_drupalservices extends auth_plugin_base
         $apiObj = new RemoteAPI($this->config->host_uri, 1, $drupalsession);
 
         // Connect to Drupal with this session
-        $ret = $apiObj->Connect();
-        if (is_null($ret)) {
+        $drupaluser = $apiObj->Connect();
+
+        if (is_null($drupaluser)) {
             //should we just return?
             if (isloggedin() && !isguestuser()) {
                 // the user is logged-off of Drupal but still logged-in on Moodle
@@ -106,8 +107,11 @@ class auth_plugin_drupalservices extends auth_plugin_base
             }
             return;
         }
-        debugging("<pre>Live session detected the user returned is\r\n".print_r($ret,true)."</pre>", DEBUG_DEVELOPER);
-        $uid = $ret->user->uid;
+
+        debugging("<pre>Live session detected the user returned is\r\n".print_r($drupaluser, true)."</pre>", DEBUG_DEVELOPER);
+
+        $uid = $drupaluser->uid[0]->value;
+
         if ($uid < 1) { //No anon
             return;
         }
@@ -116,13 +120,13 @@ class auth_plugin_drupalservices extends auth_plugin_base
             return;
         }
 
-        $drupaluser = $apiObj->Index("user/{$uid}");
-        debugging("<pre>The full user data about this user is:\r\n".print_r($drupaluser,true)."</pre>",DEBUG_DEVELOPER);
         //create/update looks up the user and writes updated information to the DB
         $this->create_update_user($drupaluser);
 
         $user = get_complete_user_data('idnumber', $uid);
-debugging("<pre>the user that should have been created or updated is:\r\n".print_r($user,true)."</pre>",DEBUG_DEVELOPER);
+
+        debugging("<pre>the user that should have been created or updated is:\r\n".print_r($user,true)."</pre>",DEBUG_DEVELOPER);
+
         // Complete the login
         complete_user_login($user);
         // redirect
@@ -156,11 +160,10 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
      *
      * @return array Moodle user 
      */
-    function create_update_user($drupal_user)
-    {
+    function create_update_user($drupal_user) {
 
         global $CFG, $DB;
-        $uid = $drupal_user->uid;
+        $uid = $drupal_user->uid[0]->value;
         // Look for user with idnumber = uid instead of using usernames as
         // drupal username might have changed.
         $user = $DB->get_record('user', array('idnumber' => $uid, 'mnethostid' => $CFG->mnet_localhost_id));
@@ -176,33 +179,37 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
         $user->modified = time();
         // blocked users in drupal have limited profile data to use, so updating their
         // status is all we can really do here
-        if($drupal_user->status) {
+        if($drupal_user->status[0]->value) {
           //new or existing, these values need to be updated
           foreach ($this->userfields as $field) {
             if(isset($this->config->{"field_map_$field"})) {
               $drupalfield = $this->config->{"field_map_$field"};
               if (!empty($drupalfield)) {
                 //there are several forms a user key can take in Drupal we've gotta check each one:
-                if (isset($drupal_user->{$drupalfield}->und[0]->value)) {
-                  $user->$field = $drupal_user->{$drupalfield}->und[0]->value;
-                } elseif (!is_array($drupal_user->$drupalfield)) {
+                if (isset($drupal_user->{$drupalfield}[0]->value)) {
+                  $user->$field = $drupal_user->{$drupalfield}[0]->value;
+                }
+                elseif (!is_array($drupal_user->$drupalfield)) {
                   $user->$field = $drupal_user->$drupalfield;
                 }
               }
             }
           }
         }
-        $user->username=$drupal_user->name;
+        $user->username = $drupal_user->name[0]->value;
         $user->idnumber = $uid;
-        $user->confirmed=($drupal_user->status?1:0);
+        $user->confirmed = ($drupal_user->status[0]->value?1:0);
         $user->deleted=0;
-        $user->suspended=(!$drupal_user->status?1:0);
-        //city (and maybe country) are required and have size requirements that need to be parsed.
-        if(empty($user->city)) $user->city="none";
-        if(empty($user->country)) $user->country="none"; // this is too big just to make a point
-        if (strlen($user->country) > 2){ //countries must be 2 digits only
-          $user->country=substr($user->country, 0, 2);
-        }
+        $user->suspended = (!$drupal_user->status[0]->value?1:0);
+
+//These are custom fields that are no longer required
+
+//        //city (and maybe country) are required and have size requirements that need to be parsed.
+//        if(empty($user->city)) $user->city="none";
+//        if(empty($user->country)) $user->country="none"; // this is too big just to make a point
+//        if (strlen($user->country) > 2){ //countries must be 2 digits only
+//          $user->country=substr($user->country, 0, 2);
+//        }
 
         if(!$user->id){
             // add the new Drupal user to Moodle
@@ -528,48 +535,48 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
         $user_cohorts = $DB->get_records_sql($sql);
         return $user_cohorts;
     }
-    /**
-     * Get Drupal session 
-     *
-     * @param string $base_url This base URL
-     *
-     * @return array session_name and session_id 
-     */
-    function get_drupal_session($cfg=null)
-    {
-      if(!$cfg) {
-        $cfg = get_config('auth_drupalservices');
-        if(!$cfg->cookiedomain){
-          //something went really wrong, try and re detect the session cookie and save it
-          $settings=$this->detect_sso_settings($cfg->host_uri);
-          set_config('cookiedomain',$settings['cookiedomain'],'auth_drupalservices');
-          $cfg->cookiedomain=$settings['cookiedomain'];
-        }
-        debugging("<pre>loaded saved session settings config:".print_r(array('host'=>$cfg->host_uri, 'cookie domain'=>$cfg->cookiedomain),true)."</pre>", DEBUG_DEVELOPER);
+  /**
+   * Get Drupal session
+   *
+   * @param string $base_url This base URL
+   *
+   * @return array session_name and session_id
+   */
+  function get_drupal_session($cfg=null)
+  {
+    if(!$cfg) {
+      $cfg = get_config('auth_drupalservices');
+      if(!$cfg->cookiedomain){
+        //something went really wrong, try and re detect the session cookie and save it
+        $settings=$this->detect_sso_settings($cfg->host_uri);
+        set_config('cookiedomain',$settings['cookiedomain'],'auth_drupalservices');
+        $cfg->cookiedomain=$settings['cookiedomain'];
       }
-
-      // Otherwise use $base_url as session name, without the protocol
-      // to use the same session identifiers across http and https.
-      list($protocol, $session_name) = explode('://', $cfg->host_uri, 2);
-      if (strtolower($protocol) == 'https') {
-          $prefix = 'SSESS';
-      } else {
-          $prefix = 'SESS';
-      }
-
-      if(isset($cfg->cookiedomain)){
-        $session_name=$cfg->cookiedomain;
-      }
-
-      $session_name = $prefix . substr(hash('sha256', $session_name), 0, 32);
-
-      if (isset($_COOKIE[$session_name])) {
-          $session_id = $_COOKIE[$session_name];
-          return array('session_name' => $session_name, 'session_id' => $session_id,);
-      } else {
-          return null;
-      }
+      debugging("<pre>loaded saved session settings config:".print_r(array('host'=>$cfg->host_uri, 'cookie domain'=>$cfg->cookiedomain),true)."</pre>", DEBUG_DEVELOPER);
     }
+
+    // Otherwise use $base_url as session name, without the protocol
+    // to use the same session identifiers across http and https.
+    list($protocol, $session_name) = explode('://', $cfg->host_uri, 2);
+    if (strtolower($protocol) == 'https') {
+        $prefix = 'SSESS';
+    } else {
+        $prefix = 'SESS';
+    }
+
+    if(isset($cfg->cookiedomain)){
+      $session_name=$cfg->cookiedomain;
+    }
+
+    $session_name = $prefix . substr(hash('sha256', $session_name), 0, 32);
+
+    if (isset($_COOKIE[$session_name])) {
+        $session_id = $_COOKIE[$session_name];
+        return array('session_name' => $session_name, 'session_id' => $session_id,);
+    } else {
+        return null;
+    }
+  }
 
   //below are static functions that only live here for namespacing reasons
   function unparse_url($parsed_url) {
