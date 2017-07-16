@@ -12,7 +12,7 @@
  * PHP version 5
  *
  * @category CategoryName
- * @package  Drupal_Services 
+ * @package  auth_drupalservices
  * @author   Dave Cannon <dave@baljarra.com>
  * @license  http://www.gnu.org/copyleft/gpl.html GNU Public License
  * @link     https://github.com/cannod/moodle-drupalservices 
@@ -66,80 +66,78 @@ class auth_plugin_drupalservices extends auth_plugin_base
      *
      * @return int return FALSE
      */
-    function loginpage_hook()
-    {
-        global $CFG, $USER, $SESSION, $DB;
-        // Check if we have a Drupal session.
-        $drupalsession = $this->get_drupal_session();
-        if ($drupalsession == null) {
-          debugging("No drupal session detected, sending to drupal for login.", DEBUG_DEVELOPER);
-            // redirect to drupal login page with destination
-            if (isset($SESSION->wantsurl) and (strpos($SESSION->wantsurl, $CFG->wwwroot) == 0)) {
-                // the URL is set and within Moodle's environment
-                $urltogo = $SESSION->wantsurl;
-                unset($SESSION->wantsurl);
-                $path = ltrim(parse_url($urltogo, PHP_URL_PATH), '/');
-                $args = parse_url($urltogo, PHP_URL_QUERY);
-                if ($args) {
-                    $args = '?' . $args;
-                }
-                // FIX so not hard coded.
-                redirect($this->config->host_uri . "/user/login?moodle_url=true&destination=" . $path . $args);
-            }
-            return; // just send user to login page
-            
-        }
-        // Verify the authenticity of the Drupal session ID
-        // Create JSON cookie used to connect to drupal services.
-        // So we connect to system/connect and we should get a valid drupal user.
-
-        $apiObj = new RemoteAPI($this->config->host_uri, 1, $drupalsession);
-
-        // Connect to Drupal with this session
-        $drupaluser = $apiObj->Connect();
-
-        if (is_null($drupaluser)) {
-            //should we just return?
-            if (isloggedin() && !isguestuser()) {
-                // the user is logged-off of Drupal but still logged-in on Moodle
-                // so we must now log-off the user from Moodle...
-                require_logout();
-            }
-            return;
-        }
-
-        debugging("<pre>Live session detected the user returned is\r\n".print_r($drupaluser, true)."</pre>", DEBUG_DEVELOPER);
-
-        $uid = $drupaluser->uid[0]->value;
-
-        if ($uid < 1) { //No anon
-            return;
-        }
-        // The Drupal session is valid; now check if Moodle is logged in...
-        if (isloggedin() && !isguestuser()) {
-            return;
-        }
-
-        //create/update looks up the user and writes updated information to the DB
-        $this->create_update_user($drupaluser);
-
-        $user = get_complete_user_data('idnumber', $uid);
-
-        debugging("<pre>the user that should have been created or updated is:\r\n".print_r($user,true)."</pre>",DEBUG_DEVELOPER);
-
-        // Complete the login
-        complete_user_login($user);
-        // redirect
+    function loginpage_hook() {
+      global $CFG, $USER, $SESSION, $DB;
+      // Check if we have a Drupal session.
+      $drupalsession = $this->get_drupal_session();
+      if ($drupalsession == null) {
+        debugging("No drupal session detected, sending to drupal for login.", DEBUG_DEVELOPER);
+        // redirect to drupal login page with destination
         if (isset($SESSION->wantsurl) and (strpos($SESSION->wantsurl, $CFG->wwwroot) == 0)) {
-            // the URL is set and within Moodle's environment
-            $urltogo = $SESSION->wantsurl;
-            unset($SESSION->wantsurl);
-        } else {
-            // no wantsurl stored or external link. Go to homepage.
-            $urltogo = $CFG->wwwroot . '/';
-            unset($SESSION->wantsurl);
+          // the URL is set and within Moodle's environment
+          $urltogo = $SESSION->wantsurl;
+          unset($SESSION->wantsurl);
+          $path = ltrim(parse_url($urltogo, PHP_URL_PATH), '/');
+          $args = parse_url($urltogo, PHP_URL_QUERY);
+          if ($args) {
+              $args = '?' . $args;
+          }
+          //TODO: figure out how to switch between HTTPS correctly
+          redirect($this->config->host_uri . "/user/login?moodleurl=" . "http://{$_SERVER['HTTP_HOST']}/{$path}{$args}");
         }
-        redirect($urltogo);
+        return; // just send user to login page
+      }
+      // Verify the authenticity of the Drupal session ID
+      // Create JSON cookie used to connect to drupal services.
+      // So we connect to system/connect and we should get a valid drupal user.
+
+      $apiObj = new RemoteAPI($this->config->host_uri, 1, $drupalsession);
+
+      // Connect to Drupal with this session
+      $drupaluser = $apiObj->Connect();
+
+      if (is_null($drupaluser)) {
+        //should we just return?
+        if (isloggedin() && !isguestuser()) {
+          // the user is logged-off of Drupal but still logged-in on Moodle
+          // so we must now log-off the user from Moodle...
+          require_logout();
+        }
+        return;
+      }
+
+      debugging("<pre>Live session detected the user returned is\r\n".print_r($drupaluser, true)."</pre>", DEBUG_DEVELOPER);
+
+      $uid = $drupaluser->uid[0]->value;
+
+      if ($uid < 1) { //No anon
+          return;
+      }
+      // The Drupal session is valid; now check if Moodle is logged in...
+      if (isloggedin() && !isguestuser()) {
+          return;
+      }
+
+      //create/update looks up the user and writes updated information to the DB
+      $this->create_update_user($drupaluser);
+
+      $user = get_complete_user_data('idnumber', $uid);
+
+      debugging("<pre>the user that should have been created or updated is:\r\n".print_r($user,true)."</pre>",DEBUG_DEVELOPER);
+
+      // Complete the login
+      complete_user_login($user);
+      // redirect
+      if (isset($SESSION->wantsurl) and (strpos($SESSION->wantsurl, $CFG->wwwroot) == 0)) {
+          // the URL is set and within Moodle's environment
+          $urltogo = $SESSION->wantsurl;
+          unset($SESSION->wantsurl);
+      } else {
+          // no wantsurl stored or external link. Go to homepage.
+          $urltogo = $CFG->wwwroot . '/';
+          unset($SESSION->wantsurl);
+      }
+      redirect($urltogo);
     }
 
   /**
@@ -259,145 +257,173 @@ class auth_plugin_drupalservices extends auth_plugin_base
      */
     function sync_users($do_updates = false)
     {
-        global $CFG, $DB;
-        // process users in Moodle that no longer exist in Drupal
-        $remote_user = $this->config->remote_user;
-        $remote_pw = $this->config->remote_pw;
-        $base_url = $this->config->host_uri;
-        $apiObj = new RemoteAPI($base_url);
-        // Required for authentication, and all other operations:
-        $ret = $apiObj->Login($remote_user, $remote_pw, true);
-        if ($ret->info['http_code']==404) {
-          die("ERROR: Login service unreachable!\n");
-        }
-        if ($ret->info['http_code']==401) {
-          die("ERROR: Login failed - check username and password!\n");
-        }
-        elseif ($ret->info['http_code']!==200) {
-          $error = "ERROR: Login to drupal failed with http code " . $ret->info['http_code'];
-          if (!empty($ret->error)) {
-            $error .= PHP_EOL . $ret->error . PHP_EOL;
-          }
-          die($error);
-        }
-        // list external users since last update
-        $vid=isset($this->config->last_vid)?$this->config->last_vid:0;
-        $pagesize=$this->config->pagesize;
-        $page=0;
+      global $CFG, $DB;
+      // process users in Moodle that no longer exist in Drupal
+      $remote_user = $this->config->remote_user;
+      $remote_pw = $this->config->remote_pw;
+      $base_url = $this->config->host_uri;
+      $apiObj = new RemoteAPI($base_url);
+      // Required for authentication, and all other operations:
+      $ret = $apiObj->Login($remote_user, $remote_pw, true);
 
-        $drupal_users = $apiObj->Index('user',"?vid={$vid},page={$page},pagesize={$pagesize}");
-        if (is_null($drupal_users) || empty($drupal_users)) {
-            die("ERROR: Problems trying to get index of users!\n");
+      if ($ret->info['http_code'] == 404) {
+        die("ERROR: Login service unreachable!\n");
+      }
+      if ($ret->info['http_code'] == 401) {
+        die("ERROR: Login failed - check username and password!\n");
+      }
+      elseif ($ret->info['http_code'] !== 200) {
+        $error = "ERROR: Login to drupal failed with http code " . $ret->info['http_code'];
+        if (!empty($ret->error)) {
+          $error .= PHP_EOL . $ret->error . PHP_EOL;
         }
-        // sync users in Drupal with users in Moodle (adding users if needed)
-        print_string('auth_drupalservicesuserstoupdate', 'auth_drupalservices', count($drupal_users));
-        foreach ($drupal_users as $drupal_user_info) {
-            // get the full user object rather than the prototype from the index service
-            // merge the listing and the full value because if the user is blocked, a full user will not be retrieved
-            $drupal_user=(array)$drupal_user_info + (array)$apiObj->Index("user/{$drupal_user_info->uid}");
-            // recast drupaluser as an object
-            $drupal_user=(object)$drupal_user;
-            // the drupal services module strips off the mail attribute if the user requested is not
-            // either the user requesting, or a user with administer users permission.
-            // luckily the updates service has the value, so we have to copy it over.
-            $drupal_user->mail=$drupal_user_info->mail;
-            if ($drupal_user_info->uid < 1) { //No anon
-                print "Skipping anon user - uid {$drupal_user->uid}\n";
-                continue;
-            }
-            print_string('auth_drupalservicesupdateuser', 'auth_drupalservices', array($drupal_user->name . '(' . $drupal_user->uid . ')'));
-            $user = $this->create_update_user($drupal_user);
-            if (empty($user)) {
-                // Something went wrong while creating the user
-                print_error('auth_drupalservicescreateaccount', 'auth_drupalservices', array($drupal_user->name));
-                continue; //Next user
-            }
+        die($error);
+      }
+      // list external users since last update
+
+      // Drupal 8 user objects have an updated date that can be used
+      // to get the most recent updates
+
+      // If more records exist with the same updated date than the items per page
+      // the system could wind up in a situation where it can't move forward with
+      // the data import.
+      // To mitigate this risk, the last_update date is set to the date of the last
+      // record on the last page. This is determined by #records < page_size.
+      // Once this condition is reached, the page_size value should get unset,
+      // and the last_update date should get incremented.
+      $last_update = isset($this->config->last_update)?$this->config->last_update:0;
+
+      $page_size = isset($this->config->page_size)?$this->config->page_size:50;
+
+      $page = isset($this->config->last_page)?$this->config->last_page + 1:0;
+
+      $drupal_users = $apiObj->ListUsers($last_update, $page, $page_size);
+
+      if (is_null($drupal_users)) {
+          die("ERROR: Problems trying to get index of users!\n");
+      }
+      // sync users in Drupal with users in Moodle (adding users if needed)
+      print_string('auth_drupalservicesuserstoupdate', 'auth_drupalservices', count($drupal_users));
+      foreach ($drupal_users as $drupal_user) {
+        if ($drupal_user->uid[0]->value < 1) { //No anon
+            print "Skipping anon user - uid {$drupal_user->uid}\n";
+            continue;
         }
-        // now that all the latest updates have been imported, store the revision point we are at.
-        set_config('last_vid',$drupal_user->vid,'auth_drupalservices');
-        // Now do cohorts
-        if ($this->config->cohorts != 0) {
-            $cohort_view = $this->config->cohort_view;
-            print "Updating cohorts using services view - $cohort_view\n";
-            $context = context_system::instance();
-            //$processed_cohorts_list = array();
-            $drupal_cohorts = $apiObj->Index($cohort_view);
-            if (is_null($drupal_cohorts)) {
-                print "ERROR: Error retreiving cohorts!\n";
-            } else {
-                // OK First lets create any Moodle cohorts that are in drupal.
-                foreach ($drupal_cohorts as $drupal_cohort) {
-                    if ($drupal_cohort->cohort_name == '') {
-                        continue; // We don't want an empty cohort name
-                        
-                    }
-                    $drupal_cohort_list[] = $drupal_cohort->cohort_name;
-                    if (!$this->cohort_exists($drupal_cohort->cohort_name)) {
-                        $newcohort = new stdClass();
-                        $newcohort->name = $drupal_cohort->cohort_name;
-                        $newcohort->idnumber = $drupal_cohort->cohort_id;
-                        $newcohort->description = $drupal_cohort->cohort_description;
-                        $newcohort->contextid = $context->id;
-                        $newcohort->component = 'auth_drupalservices';
-                        $cid = cohort_add_cohort($newcohort);
-                        print "Cohort $drupal_cohort->cohort_name ($cid) created!\n";
-                    }
-                }
-                // Next lets delete any Moodle cohorts that are not in drupal.
-                // Now create a unique array
-                $drupal_cohort_list = array_unique($drupal_cohort_list);
-                //print_r($drupal_cohort_list);
-                $moodle_cohorts = $this->moodle_cohorts();
-                //print_r($moodle_cohorts);
-                foreach ($moodle_cohorts as $moodle_cohort) {
-                    if (array_search($moodle_cohort->name, $drupal_cohort_list) === false) {
-                        print "$moodle_cohort->name not in drupal - deleteing\n";
-                        cohort_delete_cohort($moodle_cohort);
-                    }
-                    $moodle_cohorts_list[$moodle_cohort->id] = $moodle_cohort->name;
-                }
-                // Cool. Now lets go through each user and add them to cohorts.
-                // arrays to use? $userlist - list of uids.
-                // $drupal_cohorts - view. $drupal_cohorts_list. Moodle lists.
-                foreach ($userlist as $uid) {
-                    $drupal_user_cohort_list = array();
-                    //print "$uid\n";
-                    $user = $DB->get_record('user', array('idnumber' => $uid, 'mnethostid' => $CFG->mnet_localhost_id));
-                    // Get array of cohort names this user belongs to.
-                    $drupal_user_cohorts = $this->drupal_user_cohorts($uid, $drupal_cohorts);
-                    foreach ($drupal_user_cohorts as $drupal_user_cohort) {
-                        //get the cohort id frm the moodle list.
-                        $cid = array_search($drupal_user_cohort->cohort_name, $moodle_cohorts_list);
-                        //print "$cid\n";
-                        if (!$DB->record_exists('cohort_members', array('cohortid' => $cid, 'userid' => $user->id))) {
-                            cohort_add_member($cid, $user->id);
-                            print "Added $user->username ($user->id) to cohort $drupal_user_cohort->cohort_name\n";
-                        }
-                        // Create a list of enrolled cohorts to use later.
-                        $drupal_user_cohort_list[] = $cid;
-                    }
-                    // Cool. now get this users list of moodle cohorts and compare
-                    // with drupal. remove from moodle if needed.
-                    $moodle_user_cohorts = $this->moodle_user_cohorts($user);
-                    //print_r($moodle_user_cohorts);
-                    foreach ($moodle_user_cohorts as $moodle_user_cohort) {
-                        if (array_search($moodle_user_cohort->cid, $drupal_user_cohort_list) === false) {
-                            cohort_remove_member($moodle_user_cohort->cid, $user->id);
-                            print "Removed $user->username ($user->id) from cohort $moodle_user_cohort->name\n";
-                        }
-                    }
-                }
-            }
-        } // End of cohorts
-        //LOGOUT
-        if(get_config('auth_drupalservices', 'call_logout_service')) {
-          $ret = $apiObj->Logout();
-          if (is_null($ret)) {
-            print "ERROR logging out!\n";
+
+        print_string('auth_drupalservicesupdateuser', 'auth_drupalservices', array($drupal_user->name[0]->value . '(' . $drupal_user->uid[0]->value . ')'));
+        $user = $this->create_update_user($drupal_user);
+        if (empty($user)) {
+            // Something went wrong while creating the user
+            print_error('auth_drupalservicescreateaccount', 'auth_drupalservices', array($drupal_user->name));
+            continue; //Next user
+        }
+      }
+
+      // If a full page of users was returned, the laste update date remains the
+      // same, and the page increments by one.
+      if(count($drupal_users) == $page_size) {
+        set_config('last_page',$page,'auth_drupalservices');
+      }
+      //
+      elseif(count($drupal_users)) {
+        // Pagination is over and the system is all caught up. reset back to the
+        // first page, and increase the last update date.
+        set_config('last_page',-1,'auth_drupalservices');
+
+        //The dates are passed in with timezone offsets, but those offsets aren't
+        // welcome in the listing request, so they must get stripped out.
+        $last_update = preg_replace("/\+[0-9:]+$/",'',$drupal_user->changed[0]->value);
+
+        set_config('last_update',$last_update,'auth_drupalservices');
+      }
+      else {
+        // Pagination is over and the system is all caught up. reset back to the
+        // first page, and increase the last update date.
+        set_config('last_page',-1,'auth_drupalservices');
+      }
+      // Now do cohorts
+      if ($this->config->cohorts != 0) {
+          $cohort_view = $this->config->cohort_view;
+          print "Updating cohorts using services view - $cohort_view\n";
+          $context = context_system::instance();
+          //$processed_cohorts_list = array();
+          $drupal_cohorts = $apiObj->Index($cohort_view);
+          if (is_null($drupal_cohorts)) {
+              print "ERROR: Error retreiving cohorts!\n";
           } else {
-            print "Logged out from drupal services\n";
+              // OK First lets create any Moodle cohorts that are in drupal.
+              foreach ($drupal_cohorts as $drupal_cohort) {
+                  if ($drupal_cohort->cohort_name == '') {
+                      continue; // We don't want an empty cohort name
+
+                  }
+                  $drupal_cohort_list[] = $drupal_cohort->cohort_name;
+                  if (!$this->cohort_exists($drupal_cohort->cohort_name)) {
+                      $newcohort = new stdClass();
+                      $newcohort->name = $drupal_cohort->cohort_name;
+                      $newcohort->idnumber = $drupal_cohort->cohort_id;
+                      $newcohort->description = $drupal_cohort->cohort_description;
+                      $newcohort->contextid = $context->id;
+                      $newcohort->component = 'auth_drupalservices';
+                      $cid = cohort_add_cohort($newcohort);
+                      print "Cohort $drupal_cohort->cohort_name ($cid) created!\n";
+                  }
+              }
+              // Next lets delete any Moodle cohorts that are not in drupal.
+              // Now create a unique array
+              $drupal_cohort_list = array_unique($drupal_cohort_list);
+              //print_r($drupal_cohort_list);
+              $moodle_cohorts = $this->moodle_cohorts();
+              //print_r($moodle_cohorts);
+              foreach ($moodle_cohorts as $moodle_cohort) {
+                  if (array_search($moodle_cohort->name, $drupal_cohort_list) === false) {
+                      print "$moodle_cohort->name not in drupal - deleteing\n";
+                      cohort_delete_cohort($moodle_cohort);
+                  }
+                  $moodle_cohorts_list[$moodle_cohort->id] = $moodle_cohort->name;
+              }
+              // Cool. Now lets go through each user and add them to cohorts.
+              // arrays to use? $userlist - list of uids.
+              // $drupal_cohorts - view. $drupal_cohorts_list. Moodle lists.
+              foreach ($userlist as $uid) {
+                  $drupal_user_cohort_list = array();
+                  //print "$uid\n";
+                  $user = $DB->get_record('user', array('idnumber' => $uid, 'mnethostid' => $CFG->mnet_localhost_id));
+                  // Get array of cohort names this user belongs to.
+                  $drupal_user_cohorts = $this->drupal_user_cohorts($uid, $drupal_cohorts);
+                  foreach ($drupal_user_cohorts as $drupal_user_cohort) {
+                      //get the cohort id frm the moodle list.
+                      $cid = array_search($drupal_user_cohort->cohort_name, $moodle_cohorts_list);
+                      //print "$cid\n";
+                      if (!$DB->record_exists('cohort_members', array('cohortid' => $cid, 'userid' => $user->id))) {
+                          cohort_add_member($cid, $user->id);
+                          print "Added $user->username ($user->id) to cohort $drupal_user_cohort->cohort_name\n";
+                      }
+                      // Create a list of enrolled cohorts to use later.
+                      $drupal_user_cohort_list[] = $cid;
+                  }
+                  // Cool. now get this users list of moodle cohorts and compare
+                  // with drupal. remove from moodle if needed.
+                  $moodle_user_cohorts = $this->moodle_user_cohorts($user);
+                  //print_r($moodle_user_cohorts);
+                  foreach ($moodle_user_cohorts as $moodle_user_cohort) {
+                      if (array_search($moodle_user_cohort->cid, $drupal_user_cohort_list) === false) {
+                          cohort_remove_member($moodle_user_cohort->cid, $user->id);
+                          print "Removed $user->username ($user->id) from cohort $moodle_user_cohort->name\n";
+                      }
+                  }
+              }
           }
+      } // End of cohorts
+      //LOGOUT
+      if(get_config('auth_drupalservices', 'call_logout_service')) {
+        $ret = $apiObj->Logout();
+        if (is_null($ret)) {
+          print "ERROR logging out!\n";
+        } else {
+          print "Logged out from drupal services\n";
         }
+      }
     }
     /**
      * Processes and stores configuration data for this authentication plugin.

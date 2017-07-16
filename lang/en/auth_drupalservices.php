@@ -67,3 +67,8 @@ $string['auth_drupalservicesupdateuser'] ='Updated user {$a}';
 
 $string['auth_drupalservices_logout_drupal_key'] = 'Log out of Drupal when Moodle Logout happens';
 $string['auth_drupalservices_logout_drupal'] = "This should normally be checked. If your drupal site is using the masquerade or devel switch user modules, you will want to disable this to allow for easier switching between users.";
+
+$string['auth_drupalservicessyncuserstask'] = "Import users from drupal into moodle.";
+
+$string['auth_drupalservices_page_size_key'] = "User Import Batch Size";
+$string['auth_drupalservices_page_size'] = "When importing and updating users in the background, process this many users in one run.";

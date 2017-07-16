@@ -12,7 +12,7 @@
  * PHP version 5
  *
  * @category CategoryName
- * @package  Drupal_Services
+ * @package  auth_drupalservices
  * @author   Dave Cannon <dave@baljarra.com>
  * @license  http://www.gnu.org/copyleft/gpl.html GNU Public License
  * @link     https://github.com/cannod/moodle-drupalservices
@@ -61,12 +61,13 @@ $drupalauth = get_auth_plugin('drupalservices');
 **/
 
 // define default settings:
-$defaults=array(
+$defaults = array(
   'host_uri' => $CFG->wwwroot,
   'cookiedomain' => '',
   'remote_user' => '',
   'remote_pw' => '',
   'remove_user' => AUTH_REMOVEUSER_KEEP,
+  'page_size' => 50,
   'cohorts' => 0,
   'cohort_view' => "",
 );
@@ -222,6 +223,14 @@ if($config->cookiedomain !==false && $endpoint_reachable) {
 //      AUTH_REMOVEUSER_SUSPEND => get_string('auth_remove_suspend', 'auth'),
 //      AUTH_REMOVEUSER_FULLDELETE => get_string('auth_remove_delete', 'auth'),
 //    )));
+
+  // Note that the values here are directly tied to the configured options within
+  // the drupal module's view that manages the user/list/all display.
+  $size_options = array(5, 10, 25, 50, 100, 150, 200, 250, 300, 400, 500);
+  $drupalssosettings->add(new admin_setting_configselect('auth_drupalservices/page_size',
+    new lang_string('auth_drupalservices_page_size_key', 'auth_drupalservices'),
+    new lang_string('auth_drupalservices_page_size', 'auth_drupalservices'),
+    $defaults->page_size, array_combine($size_options, $size_options) ));
 
   //todo: these fields shouldn't be here if cohorts are not enabled in moodle
   $drupalssosettings->add(new admin_setting_configselect('auth_drupalservices/cohorts',
