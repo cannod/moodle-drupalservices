@@ -146,7 +146,7 @@ if($config->cookiedomain) {
 
   if ($loggedin_user = $apiObj->Connect()) {
 
-    if ($loggedin_user->uid[0]->value !== false) {
+    if ($loggedin_user->user->uid !== false) {
       debugging("<pre>Service were reached, here's the logged in user:".print_r($loggedin_user,true)."</pre>", DEBUG_DEVELOPER);
       $endpoint_reachable=true;
       $tests['session'] = array('success' => true, 'message' => "system/connect: User session data reachable and you are logged in!");
@@ -154,7 +154,7 @@ if($config->cookiedomain) {
       $tests['session'] = array('success' => false, 'message' => "system/connect: User session data reachable but you aren't logged in!");
     }
     //this data should be cached - its possible that a non-admin user
-    $fulluser = (array)$loggedin_user;
+    $fulluser=(array)$apiObj->Index("user/".$loggedin_user->user->uid);
     debugging("<pre>here's the complete user:".print_r($fulluser,true)."</pre>", DEBUG_DEVELOPER);
 
     // turn the fulluser fields into key/value options

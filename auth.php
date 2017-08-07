@@ -96,9 +96,9 @@ class auth_plugin_drupalservices extends auth_plugin_base
         $apiObj = new RemoteAPI($this->config->host_uri, 1, $drupalsession);
 
         // Connect to Drupal with this session
-        $drupaluser = $apiObj->Connect();
+        $ret = $apiObj->Connect();
 
-        if (is_null($drupaluser)) {
+        if (is_null($ret)) {
             //should we just return?
             if (isloggedin() && !isguestuser()) {
                 // the user is logged-off of Drupal but still logged-in on Moodle
@@ -108,9 +108,9 @@ class auth_plugin_drupalservices extends auth_plugin_base
             return;
         }
 
-        debugging("<pre>Live session detected the user returned is\r\n".print_r($drupaluser, true)."</pre>", DEBUG_DEVELOPER);
+        debugging("<pre>Live session detected the user returned is\r\n".print_r($ret, true)."</pre>", DEBUG_DEVELOPER);
 
-        $uid = $drupaluser->uid[0]->value;
+        $uid = $ret->user->uid;
 
         if ($uid < 1) { //No anon
             return;
@@ -119,6 +119,9 @@ class auth_plugin_drupalservices extends auth_plugin_base
         if (isloggedin() && !isguestuser()) {
             return;
         }
+
+        $drupaluser = $apiObj->Index("user/{$uid}");
+        debugging("<pre>The full user data about this user is:\r\n".print_r($drupaluser,true)."</pre>",DEBUG_DEVELOPER);
 
         //create/update looks up the user and writes updated information to the DB
         $this->create_update_user($drupaluser);
@@ -163,7 +166,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
     function create_update_user($drupal_user) {
 
         global $CFG, $DB;
-        $uid = $drupal_user->uid[0]->value;
+        $uid = $drupal_user->uid;
         // Look for user with idnumber = uid instead of using usernames as
         // drupal username might have changed.
         $user = $DB->get_record('user', array('idnumber' => $uid, 'mnethostid' => $CFG->mnet_localhost_id));
@@ -179,15 +182,15 @@ class auth_plugin_drupalservices extends auth_plugin_base
         $user->modified = time();
         // blocked users in drupal have limited profile data to use, so updating their
         // status is all we can really do here
-        if($drupal_user->status[0]->value) {
+        if($drupal_user->status) {
           //new or existing, these values need to be updated
           foreach ($this->userfields as $field) {
             if(isset($this->config->{"field_map_$field"})) {
               $drupalfield = $this->config->{"field_map_$field"};
               if (!empty($drupalfield)) {
                 //there are several forms a user key can take in Drupal we've gotta check each one:
-                if (isset($drupal_user->{$drupalfield}[0]->value)) {
-                  $user->$field = $drupal_user->{$drupalfield}[0]->value;
+                if (isset($drupal_user->{$drupalfield}->und[0]->value)) {
+                  $user->$field = $drupal_user->{$drupalfield}->und[0]->value;
                 }
                 elseif (!is_array($drupal_user->$drupalfield)) {
                   $user->$field = $drupal_user->$drupalfield;
@@ -196,11 +199,11 @@ class auth_plugin_drupalservices extends auth_plugin_base
             }
           }
         }
-        $user->username = $drupal_user->name[0]->value;
+        $user->username = $drupal_user->name;
         $user->idnumber = $uid;
-        $user->confirmed = ($drupal_user->status[0]->value?1:0);
+        $user->confirmed = ($drupal_user->status?1:0);
         $user->deleted=0;
-        $user->suspended = (!$drupal_user->status[0]->value?1:0);
+        $user->suspended = (!$drupal_user->status?1:0);
 
 //These are custom fields that are no longer required
 
