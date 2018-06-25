@@ -171,7 +171,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
         $user = $DB->get_record('user', array('idnumber' => $uid, 'mnethostid' => $CFG->mnet_localhost_id));
         if (empty($user)) {
             // build the new user object to be put into the Moodle database
-            $user = new object();
+            $user = new stdClass();
             $user->username = $username;
             $user->firstname = $firstname;
             $user->lastname = $lastname;
