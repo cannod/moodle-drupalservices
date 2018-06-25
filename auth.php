@@ -167,7 +167,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
 
         if (empty($user)) {
           // build the new user object to be put into the Moodle database
-          $user = new object();
+          $user = new stdClass();
         }
         //fixed value fields (modified could probably stand to be adjusted)
         $user->auth = $this->authtype;
