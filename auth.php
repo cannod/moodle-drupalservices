@@ -168,7 +168,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
 
         if (empty($user)) {
           // build the new user object to be put into the Moodle database
-          $user = new object();
+          $user = new stdClass();
         }
         //fixed value fields (modified could probably stand to be adjusted)
         $user->auth = $this->authtype;
