@@ -179,7 +179,10 @@ if($config->cookiedomain !==false && $endpoint_reachable) {
   //todo: these should be in a fieldset. a heading will do for now
   $drupalssosettings->add(new admin_setting_heading('drupalsso_userfieldmap', new lang_string('userfieldmap_header', 'auth_drupalservices'), new lang_string('userfieldmap_header_desc', 'auth_drupalservices')));
 
-  foreach($drupalauth->userfields as $field){
+  $drupalauth->get_custom_user_profile_fields();
+  $moodle_user_fields = array_merge($drupalauth->userfields, $drupalauth->customfields);
+
+  foreach($moodle_user_fields as $field){
     $drupalssosettings->add(new admin_setting_configselect('auth_drupalservices/field_map_'.$field,
       $field,
       new lang_string('fieldmap', 'auth_drupalservices',$field),

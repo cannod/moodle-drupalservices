@@ -12,10 +12,10 @@
  * PHP version 5
  *
  * @category CategoryName
- * @package  Drupal_Services 
+ * @package  Drupal_Services
  * @author   Dave Cannon <dave@baljarra.com>
  * @license  http://www.gnu.org/copyleft/gpl.html GNU Public License
- * @link     https://github.com/cannod/moodle-drupalservices 
+ * @link     https://github.com/cannod/moodle-drupalservices
  *
  */
 // This must be accessed from a Moodle page only!
@@ -28,10 +28,10 @@ require_once $CFG->dirroot . '/auth/drupalservices/REST-API.php';
 
 
 /**
- * class auth_plugin_drupalservices 
+ * class auth_plugin_drupalservices
  *
  * @category CategoryName
- * @package  Drupal_Services 
+ * @package  Drupal_Services
  * @author   Dave Cannon <dave@baljarra.com>
  * @license  http://www.gnu.org/copyleft/gpl.html GNU Public License
  * @link     https://github.com/cannod/moodle-drupalservices
@@ -50,8 +50,8 @@ class auth_plugin_drupalservices extends auth_plugin_base
     /**
      * This plugin is for SSO only; Drupal handles the login
      *
-     * @param string $username the username 
-     * @param string $password the password 
+     * @param string $username the username
+     * @param string $password the password
      *
      * @return int return FALSE
      */
@@ -87,7 +87,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
                 redirect($this->config->host_uri . "/user/login?moodle_url=true&destination=" . $path . $args);
             }
             return; // just send user to login page
-            
+
         }
         // Verify the authenticity of the Drupal session ID
         // Create JSON cookie used to connect to drupal services.
@@ -154,12 +154,13 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
      *
      * @param array $drupal_user the Drupal user array.
      *
-     * @return array Moodle user 
+     * @return array Moodle user
      */
     function create_update_user($drupal_user)
     {
 
         global $CFG, $DB;
+        require_once($CFG->dirroot.'/user/profile/lib.php');
         $uid = $drupal_user->uid;
         // Look for user with idnumber = uid instead of using usernames as
         // drupal username might have changed.
@@ -169,18 +170,27 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
           // build the new user object to be put into the Moodle database
           $user = new stdClass();
         }
+
         //fixed value fields (modified could probably stand to be adjusted)
         $user->auth = $this->authtype;
         $user->mnethostid = $CFG->mnet_localhost_id;
         $user->lang = $CFG->lang;
         $user->modified = time();
+
         // blocked users in drupal have limited profile data to use, so updating their
         // status is all we can really do here
         if($drupal_user->status) {
+          // load custom fields
+          $this->get_custom_user_profile_fields();
+          // merge user fields and custom fields
+          $user_fields = array_merge($this->userfields, $this->customfields);
+          $has_profile_fields = false;
+
           //new or existing, these values need to be updated
-          foreach ($this->userfields as $field) {
+          foreach ($user_fields as $field) {
             if(isset($this->config->{"field_map_$field"})) {
               $drupalfield = $this->config->{"field_map_$field"};
+
               if (!empty($drupalfield)) {
                 //there are several forms a user key can take in Drupal we've gotta check each one:
                 if (isset($drupal_user->{$drupalfield}->und[0]->value)) {
@@ -188,18 +198,25 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
                 } elseif (!is_array($drupal_user->$drupalfield)) {
                   $user->$field = $drupal_user->$drupalfield;
                 }
+
+                if (preg_match('/^profile_/', $field)) {
+                  $has_profile_fields = true;
+                }
               }
             }
           }
         }
+
         $user->username=$drupal_user->name;
         $user->idnumber = $uid;
         $user->confirmed=($drupal_user->status?1:0);
         $user->deleted=0;
         $user->suspended=(!$drupal_user->status?1:0);
+
         //city (and maybe country) are required and have size requirements that need to be parsed.
         if(empty($user->city)) $user->city="none";
         if(empty($user->country)) $user->country="none"; // this is too big just to make a point
+
         if (strlen($user->country) > 2){ //countries must be 2 digits only
           $user->country=substr($user->country, 0, 2);
         }
@@ -218,12 +235,17 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
                 print_error('auth_drupalservicescantupdate', 'auth_db', $user->username);
             }
         }
+
+        if ($has_profile_fields) {
+          profile_save_data($user);
+        }
+
         return $user;
     }
     /**
      * Run before logout
      *
-     * @return int TRUE if valid session. 
+     * @return int TRUE if valid session.
      */
     function logoutpage_hook()
     {
@@ -248,7 +270,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
      *
      * @param int $do_updates true to update existing accounts
      *
-     * @return int       
+     * @return int
      */
     function sync_users($do_updates = false)
     {
@@ -322,7 +344,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
                 foreach ($drupal_cohorts as $drupal_cohort) {
                     if ($drupal_cohort->cohort_name == '') {
                         continue; // We don't want an empty cohort name
-                        
+
                     }
                     $drupal_cohort_list[] = $drupal_cohort->cohort_name;
                     if (!$this->cohort_exists($drupal_cohort->cohort_name)) {
@@ -395,7 +417,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
     /**
      * Processes and stores configuration data for this authentication plugin.
      *
-     * @param array $config main config 
+     * @param array $config main config
      *
      * @return int TRUE
      */
@@ -459,7 +481,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
     /**
      * Check if cohort exists. return true if so.
      *
-     * @param string $drupal_cohort_name name of drupal cohort 
+     * @param string $drupal_cohort_name name of drupal cohort
      *
      * @return int TRUE
      */
@@ -481,7 +503,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
     /**
      * return list of cohorts
      *
-     * @return array moodle cohorts 
+     * @return array moodle cohorts
      */
     function moodle_cohorts()
     {
@@ -499,9 +521,9 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
      * Return an array of cohorts this uid is in.
      *
      * @param int   $uid            The drupal UID
-     * @param array $drupal_cohorts All drupal cohorts 
+     * @param array $drupal_cohorts All drupal cohorts
      *
-     * @return array cohorts for this user 
+     * @return array cohorts for this user
      */
     function drupal_user_cohorts($uid, $drupal_cohorts)
     {
@@ -517,7 +539,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
     /**
      * Return an array of moodle cohorts this user is in.
      *
-     * @param array $user Moodle user 
+     * @param array $user Moodle user
      *
      * @return array cohorts for this user
      */
@@ -529,11 +551,11 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
         return $user_cohorts;
     }
     /**
-     * Get Drupal session 
+     * Get Drupal session
      *
      * @param string $base_url This base URL
      *
-     * @return array session_name and session_id 
+     * @return array session_name and session_id
      */
     function get_drupal_session($cfg=null)
     {
