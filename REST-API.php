@@ -38,7 +38,7 @@ class RemoteAPI {
  
   // *****************************************************************************
   public function __construct( $host_uri, $status = RemoteAPI::RemoteAPI_status_unconnected, $drupalsession=array(), $timeout=60 ) {
-    $this->endpoint_uri   = $host_uri.'/';
+    $this->endpoint_uri   = $host_uri.'/moodlesso';
     $this->curldefaults[CURLOPT_TIMEOUT] = $timeout;
     $this->status  = $status;
     if(isset($drupalsession['session_name'])) {
@@ -64,12 +64,12 @@ class RemoteAPI {
 
   private function GetCSRFToken() {
 
-    $url = $this->endpoint_uri . 'session/token';
-    $response = $this->CurlHttpRequest('RemoteAPI->Token', $url, 'GET', "", true, true);
+    $url = $this->endpoint_uri . '/user/token';
+    $response = $this->CurlHttpRequest('RemoteAPI->Token', $url, 'POST', "", true, true);
     if($response->info['http_code'] <> 200){
       return false;
     }
-    return $response->response_raw;
+    return $response->response->token;
   }
   // *****************************************************************************
   // return the standard set of curl options for a POST
@@ -169,8 +169,6 @@ class RemoteAPI {
   // return an object with 'response', 'error' and 'info' fields.
   private function CurlHttpRequest( $caller, $url, $method, $data, $includeAuthCookie = false, $includeCSRFToken = false ) {
 
-    //In Drupal 8, all REST requests need to specify their requested format.
-    $url.="?_format=json";
     $ch = curl_init();    // create curl resource
     switch ($method) {
       case 'POST':   curl_setopt_array($ch, $this->GetCurlPostOptions($url,$data, $includeAuthCookie, $includeCSRFToken)); break;
@@ -185,13 +183,13 @@ class RemoteAPI {
     $ip = gethostbyname(parse_url($url,  PHP_URL_HOST));
     debugging("attempting to reach service url: ".$url, DEBUG_DEVELOPER);
     $ret = new stdClass;
-    $ret->response_raw = curl_exec($ch); // execute and get response
+    $ret->response = curl_exec($ch); // execute and get response
     $ret->error    = curl_error($ch);
     $ret->info     = curl_getinfo($ch);
     curl_close($ch);
 
     if ($ret->info['http_code'] == 200) {
-      $ret->response = json_decode($ret->response_raw);
+      $ret->response = json_decode($ret->response);
     }
 
     return $ret;
@@ -209,9 +207,9 @@ class RemoteAPI {
     // First lets get CSRF Token from services.
     $this->CSRFToken = $this->GetCSRFToken();
 
-    $url = $this->endpoint_uri.'user/login_status';
+    $url = $this->endpoint_uri.'/system/connect';
 
-    $ret = $this->CurlHttpRequest($callerId, $url, 'GET', "", true, true);
+    $ret = $this->CurlHttpRequest($callerId, $url, 'POST', "", true, true);
 
     if($debug){
       return $ret;
@@ -220,15 +218,8 @@ class RemoteAPI {
     if ($ret->info['http_code'] != 200) {
       return NULL;
     }
-    elseif ($ret->response_raw !== 0) {
-      $url = $this->endpoint_uri.'user/list/me';
-
-      // Note: The user/list/me service endpoint returns an array even though
-      // there will only ever be 1 total value at this point in the process.
-      $ret = $this->CurlHttpRequest($callerId, $url, 'GET', "", true, true);
-
-      // This is a logged in user!
-      return $ret->response[0];
+    else {
+	    return $ret->response;
     }
 
   }  // end of Connect() definition
@@ -365,7 +356,7 @@ class RemoteAPI {
       return NULL;
     }
 
-    $url = $this->endpoint_uri . $resourceType.'/'.$resourceId;
+    $url = $this->endpoint_uri.'/'.$resourceType.'/'.$resourceId;
     $ret = $this->CurlHttpRequest($callerId, $url, 'GET', NULL, true);
     return $ret->response;
   }
