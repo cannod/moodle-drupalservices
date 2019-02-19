@@ -7,12 +7,12 @@ This is a moodle authorization plugin that allows for SSO between Drupal and Moo
 All users are maintained on Drupal and Moodle authenticates via REST to the drupal Services module.
 
 In this project we support the current major version of Moodle and any of its minor versions.
-currently that is Moodle 2, and we have support for 2.4 and higher within Moodle 2.
+currently that is Moodle 3, and we have support for 3.3 and higher within Moodle 3.
 
 The branch structure is as follows: [Moodle version]-[plugin version].
-Development branches for this plugin are denoted with a ".x-dev" for example 2.x-dev.
+Development branches for this plugin are denoted with a ".x-dev" for example 3.x-dev.
 For users who want stable releases only, you can chose from the Tagged releases.
-these are denoted with a number instead of x, for example 2.x-2.01, 2.x-2.02 etc.
+these are denoted with a number instead of x, for example 3.x-3.01, 3.x-3.02 etc.
 
 To chose the proper branch, decide which version of the DrupalServices plugin you wish to use.
 If you use any version of moodle 2 beyond 2.4, and you would like to use our 2.x development line,

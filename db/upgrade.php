@@ -28,5 +28,5 @@ function xmldb_auth_drupalservices_upgrade($oldversion){
     }
     unset_all_config_for_plugin('auth/drupalservices');
   }
-  upgrade_plugin_savepoint(true, 2014123000, 'auth', 'drupalservices');
+  upgrade_plugin_savepoint(true, 2017071103, 'auth', 'drupalservices');
 }

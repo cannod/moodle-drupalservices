@@ -12,7 +12,7 @@
  * PHP version 5
  *
  * @category CategoryName
- * @package  Drupal_Services
+ * @package  auth_drupalservices
  * @author   Dave Cannon <dave@baljarra.com>
  * @license  http://www.gnu.org/copyleft/gpl.html GNU Public License
  * @link     https://github.com/cannod/moodle-drupalservices
@@ -23,7 +23,7 @@ require_once $CFG->libdir . '/authlib.php';
 require_once $CFG->dirroot . '/auth/drupalservices/auth.php';
 
 //this really shouldn't have to be reinstantiated
-$drupalauth= get_auth_plugin('drupalservices');
+$drupalauth = get_auth_plugin('drupalservices');
 
 //todo: this seemingly gets included 3 times when submitted - lets find out why
 // my guess is that its to run a validate/submit/load command set
@@ -61,12 +61,13 @@ $drupalauth= get_auth_plugin('drupalservices');
 **/
 
 // define default settings:
-$defaults=array(
+$defaults = array(
   'host_uri' => $CFG->wwwroot,
   'cookiedomain' => '',
   'remote_user' => '',
   'remote_pw' => '',
   'remove_user' => AUTH_REMOVEUSER_KEEP,
+  'page_size' => 50,
   'cohorts' => 0,
   'cohort_view' => "",
 );
@@ -101,38 +102,52 @@ $config=(object)$config;
 $endpoint_reachable=false;
 
 
-$drupalserver=new RemoteAPI($config->host_uri);
-// the settings service is public/public and just returns the cookiedomain and user field names (not data)
-if($remote_settings = $drupalserver->Settings()){
-  debugging("Received a cookie value from the remote server: ".print_r($remote_settings,true), DEBUG_DEVELOPER);
-  $endpoint_reachable=true;
-  //we connected and the service is actively responding
-  set_config('host_uri', $config->host_uri, 'auth_drupalservices');
-  //if the cookie domain hasn't been previously set, set it now
-  if($config->cookiedomain == '' && $configempty){
-    // the cookiedomain should get received via the Settings call
-    $config->cookiedomain=$remote_settings->cookiedomain;
-  }
-  if($configempty) {
-    set_config('cookiedomain', $config->cookiedomain, 'auth_drupalservices');
-  }
-} else {
-  //TODO: This should get converted into a proper message.
-  debugging("The moodlesso service is unreachable. Please verify that you have the Mooodle SSO drupal module installed and enabled: http://drupal.org/project/moodle_sso ", DEBUG_DEVELOPER);
+$drupalserver = new RemoteAPI($config->host_uri);
+
+//FIRST: See if we can detect a drupal session cookie (if a session cookie wasn't already defined.
+//we know it must be in the $config->host_uri in some way, so check all the derivitives
+if (!$config->cookiedomain) {
+  $host = parse_url($config->host_uri);
+
+  $hostparts = explode(".", $host['host']);
+  do {
+    // assemble the hostparts to test and add a leading '.'
+    $test_name = "." . implode(".", $hostparts);
+
+    $unprefixed_name = substr(hash('sha256', $test_name), 0, 32);
+
+    if ($host['scheme'] == 'http') {
+      $prefixed_name = 'SESS' . $unprefixed_name;
+    }
+    else {
+      $prefixed_name = 'SSESS' . $unprefixed_name;
+    }
+
+    if (isset($_COOKIE[$prefixed_name])) {
+      // The drupal session cookie has been discovered! Set it now and move forward
+      $config->cookiedomain = $test_name;
+      set_config('cookiedomain', $config->cookiedomain, 'auth_drupalservices');
+      break;
+    }
+  } // strip a part off and iterate
+  while (array_shift($hostparts) && count($hostparts) >= 2);
 }
+
 
 $fulluser_keys = array();
 
 if($config->cookiedomain) {
   $drupalsession = $drupalauth->get_drupal_session($config);
 
+  debugging(print_r($drupalsession, true));
 
   //now that the cookie domain is discovered, try to reach out to the endpoint to test SSO
   $apiObj = new RemoteAPI($config->host_uri, 1, $drupalsession);
   // Connect to Drupal with this session
 
   if ($loggedin_user = $apiObj->Connect()) {
-    if ($loggedin_user->user->uid !== false) {
+
+    if ($loggedin_user->uid[0]->value !== false) {
       debugging("<pre>Service were reached, here's the logged in user:".print_r($loggedin_user,true)."</pre>", DEBUG_DEVELOPER);
       $endpoint_reachable=true;
       $tests['session'] = array('success' => true, 'message' => "system/connect: User session data reachable and you are logged in!");
@@ -140,7 +155,7 @@ if($config->cookiedomain) {
       $tests['session'] = array('success' => false, 'message' => "system/connect: User session data reachable but you aren't logged in!");
     }
     //this data should be cached - its possible that a non-admin user
-    $fulluser=(array)$apiObj->Index("user/".$loggedin_user->user->uid);
+    $fulluser = (array)$loggedin_user;
     debugging("<pre>here's the complete user:".print_r($fulluser,true)."</pre>", DEBUG_DEVELOPER);
 
     // turn the fulluser fields into key/value options
@@ -208,6 +223,14 @@ if($config->cookiedomain !==false && $endpoint_reachable) {
 //      AUTH_REMOVEUSER_SUSPEND => get_string('auth_remove_suspend', 'auth'),
 //      AUTH_REMOVEUSER_FULLDELETE => get_string('auth_remove_delete', 'auth'),
 //    )));
+
+  // Note that the values here are directly tied to the configured options within
+  // the drupal module's view that manages the user/list/all display.
+  $size_options = array(5, 10, 25, 50, 100, 150, 200, 250, 300, 400, 500);
+  $drupalssosettings->add(new admin_setting_configselect('auth_drupalservices/page_size',
+    new lang_string('auth_drupalservices_page_size_key', 'auth_drupalservices'),
+    new lang_string('auth_drupalservices_page_size', 'auth_drupalservices'),
+    $defaults->page_size, array_combine($size_options, $size_options) ));
 
   //todo: these fields shouldn't be here if cohorts are not enabled in moodle
   $drupalssosettings->add(new admin_setting_configselect('auth_drupalservices/cohorts',
