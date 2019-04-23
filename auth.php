@@ -87,7 +87,6 @@ class auth_plugin_drupalservices extends auth_plugin_base
                 redirect($this->config->host_uri . "/user/login?moodle_url=true&destination=" . $path . $args);
             }
             return; // just send user to login page
-            
         }
         // Verify the authenticity of the Drupal session ID
         // Create JSON cookie used to connect to drupal services.
@@ -107,7 +106,7 @@ class auth_plugin_drupalservices extends auth_plugin_base
             return;
         }
         debugging("<pre>Live session detected the user returned is\r\n".print_r($ret,true)."</pre>", DEBUG_DEVELOPER);
-        $uid = $ret->user->uid;
+        $uid = $ret->uid[0]->value;
         if ($uid < 1) { //No anon
             return;
         }
@@ -116,13 +115,14 @@ class auth_plugin_drupalservices extends auth_plugin_base
             return;
         }
 
-        $drupaluser = $apiObj->Index("user/{$uid}");
+        $drupaluser = $ret;
         debugging("<pre>The full user data about this user is:\r\n".print_r($drupaluser,true)."</pre>",DEBUG_DEVELOPER);
         //create/update looks up the user and writes updated information to the DB
         $this->create_update_user($drupaluser);
 
         $user = get_complete_user_data('idnumber', $uid);
-debugging("<pre>the user that should have been created or updated is:\r\n".print_r($user,true)."</pre>",DEBUG_DEVELOPER);
+        debugging("<pre>the user that should have been created or updated is:\r\n".print_r($user,true)."</pre>",DEBUG_DEVELOPER);
+
         // Complete the login
         complete_user_login($user);
         // redirect
@@ -160,7 +160,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
     {
 
         global $CFG, $DB;
-        $uid = $drupal_user->uid;
+        $uid = $drupal_user->uid[0]->value;
         // Look for user with idnumber = uid instead of using usernames as
         // drupal username might have changed.
         $user = $DB->get_record('user', array('idnumber' => $uid, 'mnethostid' => $CFG->mnet_localhost_id));
@@ -176,7 +176,7 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
         $user->modified = time();
         // blocked users in drupal have limited profile data to use, so updating their
         // status is all we can really do here
-        if($drupal_user->status) {
+        if($drupal_user->status[0]->value) {
           //new or existing, these values need to be updated
           foreach ($this->userfields as $field) {
             if(isset($this->config->{"field_map_$field"})) {
@@ -192,11 +192,12 @@ debugging("<pre>the user that should have been created or updated is:\r\n".print
             }
           }
         }
-        $user->username=$drupal_user->name;
+        $user->username=$drupal_user->name[0]->value;
+        $user->email=$drupal_user->mail[0]->value;
         $user->idnumber = $uid;
-        $user->confirmed=($drupal_user->status?1:0);
+        $user->confirmed=($drupal_user->status[0]->value?1:0);
         $user->deleted=0;
-        $user->suspended=(!$drupal_user->status?1:0);
+        $user->suspended=(!$drupal_user->status[0]->value?1:0);
         //city (and maybe country) are required and have size requirements that need to be parsed.
         if(empty($user->city)) $user->city="none";
         if(empty($user->country)) $user->country="none"; // this is too big just to make a point

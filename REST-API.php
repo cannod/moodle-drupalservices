@@ -38,7 +38,7 @@ class RemoteAPI {
  
   // *****************************************************************************
   public function __construct( $host_uri, $status = RemoteAPI::RemoteAPI_status_unconnected, $drupalsession=array(), $timeout=60 ) {
-    $this->endpoint_uri   = $host_uri.'/moodlesso';
+    $this->endpoint_uri   = $host_uri;
     $this->curldefaults[CURLOPT_TIMEOUT] = $timeout;
     $this->status  = $status;
     if(isset($drupalsession['session_name'])) {
@@ -64,12 +64,12 @@ class RemoteAPI {
 
   private function GetCSRFToken() {
 
-    $url = $this->endpoint_uri . '/user/token';
-    $response = $this->CurlHttpRequest('RemoteAPI->Token', $url, 'POST', "", true, true);
+    $url = $this->endpoint_uri . '/session/token';
+    $response = $this->CurlHttpRequest('RemoteAPI->Token', $url, 'GET', "", true, true);
     if($response->info['http_code'] <> 200){
       return false;
     }
-    return $response->response->token;
+    return $response->body;
   }
   // *****************************************************************************
   // return the standard set of curl options for a POST
@@ -183,6 +183,7 @@ class RemoteAPI {
     debugging("attempting to reach service url: ".$url, DEBUG_DEVELOPER);
     $ret = new stdClass;
     $ret->response = curl_exec($ch); // execute and get response
+    $ret->body = $ret->response; // execute and get response
     $ret->error    = curl_error($ch);
     $ret->info     = curl_getinfo($ch);
     curl_close($ch);
@@ -197,7 +198,7 @@ class RemoteAPI {
   }
 
   // *****************************************************************************
-  // Connect: uses the cURL library to handle system connect 
+  // Connect: uses the cURL library to handle system connect
   public function Connect($debug=false) {
 
     $callerId = 'RemoteAPI->Connect';
@@ -208,9 +209,9 @@ class RemoteAPI {
     // First lets get CSRF Token from services.
     $this->CSRFToken = $this->GetCSRFToken();
 
-    $url = $this->endpoint_uri.'/system/connect';
+    $url = $this->endpoint_uri.'/user/login_status?_format=json';
 
-    $ret = $this->CurlHttpRequest($callerId, $url, 'POST', "", true, true);
+    $ret = $this->CurlHttpRequest($callerId, $url, 'GET', "", true, true);
 
     if($debug){
       return $ret;
@@ -219,10 +220,18 @@ class RemoteAPI {
     if ($ret->info['http_code'] != 200) {
       return NULL;
     }
-    else {
-      return $ret->response;
+
+    $drupalUid = $ret->body;
+
+    $url = $this->endpoint_uri.'/user/'.$drupalUid.'?_format=json';
+
+    $ret = $this->CurlHttpRequest($callerId, $url, 'GET', "", true, true);
+
+    if ($ret->info['http_code'] != 200) {
+      return NULL;
     }
 
+    return json_decode($ret->body);
   }  // end of Connect() definition
 
   // *****************************************************************************
