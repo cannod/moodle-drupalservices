@@ -35,7 +35,7 @@ class RemoteAPI {
   );
   const RemoteAPI_status_unconnected = 0;
   const RemoteAPI_status_loggedin    = 1;
- 
+
   // *****************************************************************************
   public function __construct( $host_uri, $status = RemoteAPI::RemoteAPI_status_unconnected, $drupalsession=array(), $timeout=60 ) {
     $this->endpoint_uri   = $host_uri;
@@ -90,7 +90,7 @@ class RemoteAPI {
 
     return $ret;
   }
-   
+
   // *****************************************************************************
   // return the standard set of curl options for a GET
   private function GetCurlGetOptions( $url, $includeAuthCookie = false ) {
@@ -209,21 +209,7 @@ class RemoteAPI {
     // First lets get CSRF Token from services.
     $this->CSRFToken = $this->GetCSRFToken();
 
-    $url = $this->endpoint_uri.'/user/login_status?_format=json';
-
-    $ret = $this->CurlHttpRequest($callerId, $url, 'GET', "", true, true);
-
-    if($debug){
-      return $ret;
-    }
-
-    if ($ret->info['http_code'] != 200) {
-      return NULL;
-    }
-
-    $drupalUid = $ret->body;
-
-    $url = $this->endpoint_uri.'/user/'.$drupalUid.'?_format=json';
+    $url = $this->endpoint_uri.'/system/connect?_format=json';
 
     $ret = $this->CurlHttpRequest($callerId, $url, 'GET', "", true, true);
 
@@ -231,7 +217,8 @@ class RemoteAPI {
       return NULL;
     }
 
-    return json_decode($ret->body);
+    $users = json_decode($ret->body);
+    return $users[0];
   }  // end of Connect() definition
 
   // *****************************************************************************
